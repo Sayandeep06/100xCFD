@@ -39,7 +39,8 @@ export class Poller{
                     quantity: parseFloat(data.q),
                     trade_time: new Date(data.T),
                 }
-                RedisManager.getInstance().send(tradeData)
+                RedisManager.getInstance().sendToDB(tradeData)
+                RedisManager.getInstance().sendPrice(data.p)
             }catch(error){
                 console.log(error)
             }
