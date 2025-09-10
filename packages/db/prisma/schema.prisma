@@ -14,3 +14,12 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model trade {
+  id         String   @id @default(uuid())
+  symbol     String
+  price      Float
+  quantity   Float
+  trade_time DateTime
+  
+  @@index([symbol, trade_time])
+}

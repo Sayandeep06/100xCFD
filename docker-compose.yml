@@ -1,20 +1,24 @@
+version: '3.8'
+
 services:
+  cfd-postgres:
+    image: postgres:15-alpine
+    container_name: cfd-trading-db
+    environment:
+      POSTGRES_DB: cfd_trading
+      POSTGRES_USER: cfduser
+      POSTGRES_PASSWORD: cfdpass123
+    ports:
+      - "5433:5432"
+    volumes:
+      - cfd_postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
   redis:
     image: redis:latest
     container_name: redis
     ports:
       - "6379:6379"
-  timescaledb:
-    image: timescale/timescaledb:latest-pg12
-    container_name: timescaledb
-    ports:
-      - "5432:5432"
-    environment:
-      POSTGRES_DB: my_database
-      POSTGRES_USER: your_user
-      POSTGRES_PASSWORD: your_password
-    volumes:
-      - timescale-data:/var/lib/postgresql/data
 
 volumes:
-  timescale-data:
+  cfd_postgres_data:
+    driver: local

@@ -136,6 +136,9 @@ importers:
       '@prisma/client':
         specifier: 6.15.0
         version: 6.15.0(prisma@6.15.0(typescript@5.9.2))(typescript@5.9.2)
+      redis:
+        specifier: ^5.8.2
+        version: 5.8.2
     devDependencies:
       prisma:
         specifier: 6.15.0
