@@ -2,11 +2,11 @@ import { createClient } from 'redis'
 import { RedisClientType } from 'redis'
 import { prisma } from './index'
 
-interface TradeMessage {
-  symbol: string
-  price: number
-  quantity: number
-  timestamp: number
+export interface TradeMessage {
+  symbol: string;
+  price: number;
+  quantity: number;
+  trade_time: Date;
 }
 
 export class RedisManager {
@@ -34,24 +34,22 @@ export class RedisManager {
         
         if (message) {
           const trade: TradeMessage = JSON.parse(message)
-          
-          // Store individual trade only
           await prisma.trade.create({
             data: {
               symbol: trade.symbol,
               price: trade.price,
               quantity: trade.quantity,
-              trade_time: new Date(trade.timestamp)
+              trade_time: trade.trade_time
             }
           })
 
           console.log(`Stored trade: ${trade.symbol} $${trade.price} qty:${trade.quantity}`)
         } else {
-          await new Promise(resolve => setTimeout(resolve, 100))
+          continue
         }
       } catch (error) {
         console.error('Error in price poller:', error)
-        await new Promise(resolve => setTimeout(resolve, 1000))
+        continue
       }
     }
   }

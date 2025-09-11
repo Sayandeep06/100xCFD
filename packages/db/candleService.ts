@@ -47,7 +47,7 @@ export class CandleService {
 
   static async get1MinCandles(symbol: string, from: Date, to: Date): Promise<Candle[]> {
     const candles: Candle[] = []
-    const interval = 60 * 1000 // 1 minute in ms
+    const interval = 60 * 1000 
 
     let current = this.getTimeBucket(from, interval)
     const end = this.getTimeBucket(to, interval)
@@ -68,8 +68,7 @@ export class CandleService {
 
   static async get5MinCandles(symbol: string, from: Date, to: Date): Promise<Candle[]> {
     const candles: Candle[] = []
-    const interval = 5 * 60 * 1000 // 5 minutes in ms
-
+    const interval = 5 * 60 * 1000 
     let current = this.getTimeBucket(from, interval)
     const end = this.getTimeBucket(to, interval)
 
@@ -89,7 +88,7 @@ export class CandleService {
 
   static async get1HourCandles(symbol: string, from: Date, to: Date): Promise<Candle[]> {
     const candles: Candle[] = []
-    const interval = 60 * 60 * 1000 // 1 hour in ms
+    const interval = 60 * 60 * 1000 
 
     let current = this.getTimeBucket(from, interval)
     const end = this.getTimeBucket(to, interval)
@@ -110,7 +109,7 @@ export class CandleService {
 
   static async get1DayCandles(symbol: string, from: Date, to: Date): Promise<Candle[]> {
     const candles: Candle[] = []
-    const interval = 24 * 60 * 60 * 1000 // 1 day in ms
+    const interval = 24 * 60 * 60 * 1000 
 
     let current = this.getTimeBucket(from, interval)
     const end = this.getTimeBucket(to, interval)
@@ -129,7 +128,6 @@ export class CandleService {
     return candles
   }
 
-  // Get latest price for a symbol
   static async getLatestPrice(symbol: string): Promise<number | null> {
     const latestTrade = await prisma.trade.findFirst({
       where: { symbol },
@@ -139,7 +137,6 @@ export class CandleService {
     return latestTrade?.price || null
   }
 
-  // Get trading volume for a time period
   static async getVolume(symbol: string, from: Date, to: Date): Promise<number> {
     const result = await prisma.trade.aggregate({
       where: {

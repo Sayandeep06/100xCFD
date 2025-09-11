@@ -12,8 +12,8 @@ export type binanceData = {
 }
 
 export interface TradeData {
-    symbol: string;
-    price: number;
-    quantity: number;
-    trade_time: Date;
+  symbol: string;
+  price: number;
+  quantity: number;
+  trade_time: Date;
 }
