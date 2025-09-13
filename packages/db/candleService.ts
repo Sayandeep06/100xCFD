@@ -11,146 +11,129 @@ export interface Candle {
 }
 
 export class CandleService {
-  private static getTimeBucket(timestamp: Date, intervalMs: number): Date {
-    const bucketTime = Math.floor(timestamp.getTime() / intervalMs) * intervalMs
-    return new Date(bucketTime)
-  }
-
-  static async calculateCandle(
-    symbol: string, 
-    startTime: Date, 
-    endTime: Date
-  ): Promise<Candle | null> {
-    const trades = await prisma.trade.findMany({
-      where: {
-        symbol,
-        trade_time: {
-          gte: startTime,
-          lt: endTime
+    private static instance: CandleService
+    private static getClosestTime(timestamp: Date, interval: number): Date {
+        const time = Math.floor(timestamp.getTime() / interval) * interval;
+        //timestamp.getTime() gives a numeric representation to the date
+        return new Date(time);
+    }
+    static async getCandles(symbol: string, startTime: Date, endTime: Date): Promise<Candle | null> {
+        const trades = await prisma.trade.findMany({
+            where: {
+                symbol,
+                trade_time:{
+                    gte: startTime,
+                    lt: endTime
+                }
+            },
+            orderBy: {trade_time: 'asc'}
+        })
+        if(trades.length == 0)      return null;
+        return{
+            symbol: symbol,
+            timestamp: startTime,
+            open: trades[0].price,
+            high: Math.max(...trades.map(t => t.price)),
+            low: Math.min(...trades.map(t=>t.price)),
+            close: trades[trades.length-1].price,
+            volume: trades.reduce((acc, t) => acc + t.price,0)
         }
-      },
-      orderBy: { trade_time: 'asc' }
-    })
-
-    if (trades.length === 0) return null
-
-    return {
-      symbol,
-      timestamp: startTime,
-      open: trades[0].price,
-      high: Math.max(...trades.map(t => t.price)),
-      low: Math.min(...trades.map(t => t.price)),
-      close: trades[trades.length - 1].price,
-      volume: trades.reduce((sum, t) => sum + t.quantity, 0)
     }
-  }
+    static async get1MinCandles(symbol:string, from: Date, to: Date): Promise<Candles[] | null> {
+        const candles: Candle[] = []
+        const interval = 60 * 1000
 
-  static async get1MinCandles(symbol: string, from: Date, to: Date): Promise<Candle[]> {
-    const candles: Candle[] = []
-    const interval = 60 * 1000 
+        let current = this.getClosestTime(from, interval)
+        const end = this.getClosestTime(to, interval)
 
-    let current = this.getTimeBucket(from, interval)
-    const end = this.getTimeBucket(to, interval)
+        while(current <= end){
+            const candleEnd = new Date(current.getTime() + interval)
+            const candle = await this.getCandles(symbol, current, candleEnd)
 
-    while (current <= end) {
-      const candleEnd = new Date(current.getTime() + interval)
-      const candle = await this.calculateCandle(symbol, current, candleEnd)
-      
-      if (candle) {
-        candles.push(candle)
-      }
-      
-      current = new Date(current.getTime() + interval)
+            if(candle){
+                candles.push(candle)
+            }
+
+            current = end
+        }return candles
     }
+    static async get5MinCandles(symbol:string, from: Date, to: Date): Promise<Candles[] | null> {
+        const candles: Candle[] = []
+        const interval = 60 * 1000 * 5
 
-    return candles
-  }
+        let current = this.getClosestTime(from, interval)
+        const end = this.getClosestTime(to, interval)
 
-  static async get5MinCandles(symbol: string, from: Date, to: Date): Promise<Candle[]> {
-    const candles: Candle[] = []
-    const interval = 5 * 60 * 1000 
-    let current = this.getTimeBucket(from, interval)
-    const end = this.getTimeBucket(to, interval)
+        while(current <= end){
+            const candleEnd = new Date(current.getTime() + interval)
+            const candle = await this.getCandles(symbol, current, candleEnd)
 
-    while (current <= end) {
-      const candleEnd = new Date(current.getTime() + interval)
-      const candle = await this.calculateCandle(symbol, current, candleEnd)
-      
-      if (candle) {
-        candles.push(candle)
-      }
-      
-      current = new Date(current.getTime() + interval)
+            if(candle){
+                candles.push(candle)
+            }
+
+            current = end
+        }return candles
     }
+    static async get1HrCandles(symbol:string, from: Date, to: Date): Promise<Candles[] | null> {
+        const candles: Candle[] = []
+        const interval = 60 * 1000 * 60
 
-    return candles
-  }
+        let current = this.getClosestTime(from, interval)
+        const end = this.getClosestTime(to, interval)
 
-  static async get1HourCandles(symbol: string, from: Date, to: Date): Promise<Candle[]> {
-    const candles: Candle[] = []
-    const interval = 60 * 60 * 1000 
+        while(current <= end){
+            const candleEnd = new Date(current.getTime() + interval)
+            const candle = await this.getCandles(symbol, current, candleEnd)
 
-    let current = this.getTimeBucket(from, interval)
-    const end = this.getTimeBucket(to, interval)
+            if(candle){
+                candles.push(candle)
+            }
 
-    while (current <= end) {
-      const candleEnd = new Date(current.getTime() + interval)
-      const candle = await this.calculateCandle(symbol, current, candleEnd)
-      
-      if (candle) {
-        candles.push(candle)
-      }
-      
-      current = new Date(current.getTime() + interval)
+            current = end
+        }return candles
     }
+    static async get1DayCandles(symbol:string, from: Date, to: Date): Promise<Candles[] | null> {
+        const candles: Candle[] = []
+        const interval = 60 * 1000 * 60 * 24
 
-    return candles
-  }
+        let current = this.getClosestTime(from, interval)
+        const end = this.getClosestTime(to, interval)
 
-  static async get1DayCandles(symbol: string, from: Date, to: Date): Promise<Candle[]> {
-    const candles: Candle[] = []
-    const interval = 24 * 60 * 60 * 1000 
+        while(current <= end){
+            const candleEnd = new Date(current.getTime() + interval)
+            const candle = await this.getCandles(symbol, current, candleEnd)
 
-    let current = this.getTimeBucket(from, interval)
-    const end = this.getTimeBucket(to, interval)
+            if(candle){
+                candles.push(candle)
+            }
 
-    while (current <= end) {
-      const candleEnd = new Date(current.getTime() + interval)
-      const candle = await this.calculateCandle(symbol, current, candleEnd)
-      
-      if (candle) {
-        candles.push(candle)
-      }
-      
-      current = new Date(current.getTime() + interval)
+            current = end
+        }return candles
     }
+    static async getLatestPrice(symbol: string): Promise<number | null>{
+        const price = prisma.trade.findFirst({
+            where: {symbol},
+            orderBy: {
+                trade_time: 'desc'
+            }
+        })
+        return price?.price || null
+    }
+    static async getVolume(symbol: string, from: Date, to: Date): Promise<number> {
+        const result = await prisma.trade.aggregate({
+            where: {
+                symbol,
+                trade_time: {
+                    gte: from,
+                    lte: to
+                }
+            },
+            _sum: {
+                quantity: true
+            }
+        })
 
-    return candles
-  }
-
-  static async getLatestPrice(symbol: string): Promise<number | null> {
-    const latestTrade = await prisma.trade.findFirst({
-      where: { symbol },
-      orderBy: { trade_time: 'desc' }
-    })
-
-    return latestTrade?.price || null
-  }
-
-  static async getVolume(symbol: string, from: Date, to: Date): Promise<number> {
-    const result = await prisma.trade.aggregate({
-      where: {
-        symbol,
-        trade_time: {
-          gte: from,
-          lte: to
-        }
-      },
-      _sum: {
-        quantity: true
-      }
-    })
-
-    return result._sum.quantity || 0
-  }
+        return result._sum.quantity || 0
+    }
 }
