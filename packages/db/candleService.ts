@@ -39,7 +39,7 @@ export class CandleService {
             volume: trades.reduce((acc, t) => acc + t.price,0)
         }
     }
-    static async get1MinCandles(symbol:string, from: Date, to: Date): Promise<Candle[] | null> {
+    static async get1MinCandles(symbol:string, from: Date, to: Date): Promise<Candle[]> {
         const candles: Candle[] = []
         const interval = 60 * 1000
 
@@ -54,10 +54,10 @@ export class CandleService {
                 candles.push(candle)
             }
 
-            current = end
+            current = new Date(current.getTime() + interval)
         }return candles
     }
-    static async get5MinCandles(symbol:string, from: Date, to: Date): Promise<Candle[] | null> {
+    static async get5MinCandles(symbol:string, from: Date, to: Date): Promise<Candle[]> {
         const candles: Candle[] = []
         const interval = 60 * 1000 * 5
 
@@ -72,10 +72,10 @@ export class CandleService {
                 candles.push(candle)
             }
 
-            current = end
+            current = new Date(current.getTime() + interval)
         }return candles
     }
-    static async get1HrCandles(symbol:string, from: Date, to: Date): Promise<Candle[] | null> {
+    static async get1HrCandles(symbol:string, from: Date, to: Date): Promise<Candle[]> {
         const candles: Candle[] = []
         const interval = 60 * 1000 * 60
 
@@ -90,10 +90,10 @@ export class CandleService {
                 candles.push(candle)
             }
 
-            current = end
+            current = new Date(current.getTime() + interval)
         }return candles
     }
-    static async get1DayCandles(symbol:string, from: Date, to: Date): Promise<Candle[] | null> {
+    static async get1DayCandles(symbol:string, from: Date, to: Date): Promise<Candle[]> {
         const candles: Candle[] = []
         const interval = 60 * 1000 * 60 * 24
 
@@ -108,7 +108,7 @@ export class CandleService {
                 candles.push(candle)
             }
 
-            current = end
+            current = new Date(current.getTime() + interval)
         }return candles
     }
     static async getLatestPrice(symbol: string): Promise<number | null>{
