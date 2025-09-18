@@ -6,7 +6,7 @@ export interface User {
     balances: {
         usd: {
             available: number;
-            margin_used: number;
+            used: number;
         };
     };
 }
@@ -43,7 +43,7 @@ export interface Order {
     liquidation_price: number;
 
 
-    status: 'pending' | 'filled' | 'cancelled' | 'liquidated';
+    status: 'filled' | 'cancelled' | 'liquidated';
     created_at: Date;
     filled_at?: Date;
     closed_at?: Date;
@@ -91,8 +91,6 @@ export interface LiquidationEvent {
 export interface TradingEngineConfig {
 
     max_leverage: number;
-    margin_call_ratio: number;
-    liquidation_fee: number;
     liquidation_buffer: number;
 
 

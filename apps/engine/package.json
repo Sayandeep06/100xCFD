@@ -8,5 +8,10 @@
   },
   "keywords": [],
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "redis": "^5.8.2",
+    "uuid": "^13.0.0",
+    "db": "workspace:*"
+  }
 }
