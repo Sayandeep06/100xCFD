@@ -1,4 +1,4 @@
-import type { User, Order, Position, MarketPrice, TradingEngineConfig, LiquidationEvent } from './types';
+import type { User, Position, MarketPrice, TradingEngineConfig, LiquidationEvent } from './types';
 import { v4 as uuidv4 } from 'uuid';
 import {createClient} from "redis";
 import { CandleService } from 'db';
@@ -7,10 +7,10 @@ export class TradingEngine{
     private static instance: TradingEngine
     private users : Map<number, User> = new Map();
     private positions: Map<string, Position> = new Map();
-    private orders: Map<string, Order> = new Map();
     private prices: Map<string, MarketPrice> = new Map();
     private liquidations: LiquidationEvent[] = []
     private config: TradingEngineConfig
+
     private constructor(){
         this.config = {
             max_leverage: 100,
@@ -20,7 +20,6 @@ export class TradingEngine{
         }
         this.startPricePolling();
         this.loadInitialData();
-        this.startPriceMonitoring();
     }
     public static getInstance(){
         if(!this.instance){
@@ -40,6 +39,14 @@ export class TradingEngine{
                 }
             }
         });
+
+        this.prices.set('BTCUSDT', {
+            symbol: 'BTCUSDT',
+            bid: 100000,
+            ask: 102000,
+            spread: 2000,
+            timestamp: new Date()
+        });
     }
 
     private startPricePolling(): void {
@@ -52,9 +59,7 @@ export class TradingEngine{
         symbol: string,
         side: 'buy'| 'sell',
         margin: number,
-        leverage: number,
-        orderType: 'market' | 'limit' = 'market',
-        limitPrice?: number
+        leverage: number
     ){
         const user = this.users.get(userId)
         if(!user)   throw new Error("User not found")
@@ -83,35 +88,24 @@ export class TradingEngine{
         user.balances.usd.available -= margin;
         user.balances.usd.used += margin;
 
-        const position: Order = {
-            orderId: uuidv4(),
-            userId,
-            symbol,
-            side,
-            type: orderType,
-            leverage,
-            margin,
-            position_size,
-            quantity,
-            entry_price,
+        const position: Position = {
+            positionId: uuidv4(),
+            userId, symbol,
+            side: side === 'buy' ? 'long' : 'short',
+            leverage, margin, position_size, quantity, entry_price,
             current_price: entry_price,
-            limit_price: limitPrice,
-            liquidation_price,
-            status: "filled",
-            created_at: new Date(),
-            filled_at: new Date()
-        }
-        this.orders.set(position.orderId, position);
-        this.createPosition(position)
+            unrealized_pnl: 0, realized_pnl: 0, roi_percentage: 0,
+            liquidation_price, margin_ratio: 1.0,
+            status: 'open',
+            opened_at: new Date()
+        };
+        this.positions.set(position.positionId, position)
 
         return position
     }
 
-    private createPosition(order: Order): Position{
-
-    }
     async updatePrice() {
-        const symbols = ['BTCUSD'];
+        const symbols = ['BTCUSDT'];
 
         const pollPrices = async () => {
             for (const symbol of symbols) {
@@ -121,7 +115,7 @@ export class TradingEngine{
                         CandleService.getLatestAskPrice(symbol)
                     ]);
 
-                    if (bidPrice && askPrice) {
+                    if (bidPrice && askPrice && bidPrice > 0 && askPrice > 0) {
                         this.prices.set(symbol, {
                             symbol,
                             bid: bidPrice,
@@ -133,9 +127,26 @@ export class TradingEngine{
                         console.log(`Updated ${symbol}: bid=${bidPrice}, ask=${askPrice}`);
 
                         this.updatePositionPrices(symbol, (bidPrice + askPrice) / 2);
+                    } else {
+                        console.warn(`Invalid price data for ${symbol}: bid=${bidPrice}, ask=${askPrice}. Using existing prices for position updates.`);
+
+                        const existingPrice = this.prices.get(symbol);
+                        if (existingPrice) {
+                            this.updatePositionPrices(symbol, (existingPrice.bid + existingPrice.ask) / 2);
+                        } else {
+                            console.error(`No existing price data available for ${symbol}. Skipping position updates.`);
+                        }
                     }
                 } catch (error) {
                     console.error(`Error updating price for ${symbol}:`, error);
+
+                    const existingPrice = this.prices.get(symbol);
+                    if (existingPrice) {
+                        console.warn(`Using existing price data for ${symbol} position updates due to fetch error.`);
+                        this.updatePositionPrices(symbol, (existingPrice.bid + existingPrice.ask) / 2);
+                    } else {
+                        console.error(`No fallback price data available for ${symbol}. Positions cannot be updated.`);
+                    }
                 }
             }
         };
@@ -145,13 +156,36 @@ export class TradingEngine{
         setInterval(pollPrices, 1000);
     }
     private updatePositionPrices(symbol:string, currentPrice:number): void{
+        for (const position of this.positions.values()) {
+            if (position.symbol === symbol && position.status === 'open') {
+                position.current_price = currentPrice;
 
+                const price_diff = position.side === 'long'
+                    ? currentPrice - position.entry_price
+                    : position.entry_price - currentPrice;
+                position.unrealized_pnl = price_diff * position.quantity;
+                position.roi_percentage = (position.unrealized_pnl / position.margin) * 100;
+                position.margin_ratio = (position.margin + position.unrealized_pnl) / position.margin;
+
+                if (position.margin_ratio <= 0.01) {
+                    console.log(`🔥 Liquidating ${position.positionId}: Price=${currentPrice}, Liquidation=${position.liquidation_price.toFixed(2)}, Margin Ratio=${(position.margin_ratio * 100).toFixed(1)}%`);
+                    this.liquidatePosition(position.positionId, 'margin_call');
+                }
+            }
+        }
     }
     private calculateUnrealisedPnL(position:Position):number{
-
+        const price_diff = position.side === 'long'
+            ? position.current_price - position.entry_price
+            : position.entry_price - position.current_price;
+        return price_diff * position.quantity;
     }
-    private checkPositionLiquidation(position:Position){
-
+    private checkPositionLiquidation(position:Position): boolean {
+        if (position.margin_ratio <= 0.01) {
+            this.liquidatePosition(position.positionId, 'margin_call');
+            return true;
+        }
+        return false;
     }
 
     getCurrentBidPrice(symbol: string): number | null {
@@ -166,5 +200,108 @@ export class TradingEngine{
 
     getCurrentMarketPrice(symbol: string): MarketPrice | null {
         return this.prices.get(symbol) || null;
+    }
+
+    liquidatePosition(positionId: string, reason: 'margin_call'): void {
+        const position = this.positions.get(positionId);
+        if (!position || position.status !== 'open') return;
+
+        const user = this.users.get(position.userId);
+        if (!user) return;
+
+        const final_pnl = position.unrealized_pnl;
+        const net_pnl = final_pnl;
+
+        const remaining_margin = Math.max(0, position.margin + net_pnl);
+        const margin_lost = position.margin - remaining_margin;
+
+        user.balances.usd.available += remaining_margin;
+        user.balances.usd.used -= position.margin;
+
+        position.status = 'liquidated';
+        position.realized_pnl = final_pnl;
+        position.closed_at = new Date();
+
+        const liquidation: LiquidationEvent = {
+            positionId,
+            userId: position.userId,
+            symbol: position.symbol,
+            liquidation_price: position.current_price,
+            margin_lost,
+            timestamp: new Date(),
+            reason
+        };
+
+        this.liquidations.push(liquidation);
+
+        console.log(`🔥 LIQUIDATION: Position ${positionId} | Loss: ${margin_lost.toFixed(2)} | No fees`);
+    }
+
+    closePosition(positionId: string, userId: number): Position {
+        const position = this.positions.get(positionId);
+        if (!position) throw new Error('Position not found');
+        if (position.userId !== userId) throw new Error('Unauthorized');
+        if (position.status !== 'open') throw new Error('Position not open');
+
+        const user = this.users.get(userId);
+        if (!user) throw new Error('User not found');
+
+        const net_pnl = position.unrealized_pnl;
+
+        const final_amount = position.margin + net_pnl;
+        user.balances.usd.available += final_amount;
+        user.balances.usd.used -= position.margin;
+
+        position.status = 'closed';
+        position.realized_pnl = position.unrealized_pnl;
+        position.closed_at = new Date();
+
+        console.log(`Position closed: ${positionId} | P&L: ${net_pnl.toFixed(2)}`);
+
+        return position;
+    }
+
+    createUser(userId: number, username: string, startingBalance: number = 10000): User {
+        if (this.users.has(userId)) {
+            throw new Error(`User with ID ${userId} already exists`);
+        }
+
+        const newUser: User = {
+            userId,
+            username,
+            password: '',
+            balances: {
+                usd: {
+                    available: startingBalance,
+                    used: 0
+                }
+            }
+        };
+
+        this.users.set(userId, newUser);
+        console.log(`Created new user: ${userId} (${username}) with balance ${startingBalance}`);
+
+        return newUser;
+    }
+
+    getUser(userId: number): User | undefined {
+        return this.users.get(userId);
+    }
+
+    getUserPositions(userId: number): Position[] {
+        return Array.from(this.positions.values())
+            .filter(pos => pos.userId === userId);
+    }
+
+    getMarketPrice(symbol: string): MarketPrice | undefined {
+        return this.prices.get(symbol);
+    }
+
+    getAllPrices(): Map<string, MarketPrice> {
+        return this.prices;
+    }
+
+    getLiquidations(): LiquidationEvent[] {
+        return this.liquidations;
     }
 }

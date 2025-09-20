@@ -120,6 +120,34 @@ export class CandleService {
         })
         return price?.price || null
     }
+
+    static async getLatestBidPrice(symbol: string): Promise<number | null> {
+        const latestTrades = await prisma.trade.findMany({
+            where: {symbol},
+            orderBy: {
+                trade_time: 'desc'
+            },
+            take: 10
+        })
+
+        if (latestTrades.length === 0) return null
+
+        return latestTrades[0].price
+    }
+
+    static async getLatestAskPrice(symbol: string): Promise<number | null> {
+        const latestTrades = await prisma.trade.findMany({
+            where: {symbol},
+            orderBy: {
+                trade_time: 'desc'
+            },
+            take: 10
+        })
+
+        if (latestTrades.length === 0) return null
+
+        return latestTrades[0].price
+    }
     static async getVolume(symbol: string, from: Date, to: Date): Promise<number> {
         const result = await prisma.trade.aggregate({
             where: {
