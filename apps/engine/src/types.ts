@@ -13,9 +13,7 @@ export interface User {
 
 export interface MarketPrice {
     symbol: string;
-    bid: number;
-    ask: number;
-    spread: number;
+    price: number;
     timestamp: Date;
 }
 

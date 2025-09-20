@@ -1,6 +1,5 @@
 import type { User, Position, MarketPrice, TradingEngineConfig, LiquidationEvent } from './types';
 import { v4 as uuidv4 } from 'uuid';
-import {createClient} from "redis";
 import { CandleService } from 'db';
 
 export class TradingEngine{
@@ -42,9 +41,7 @@ export class TradingEngine{
 
         this.prices.set('BTCUSDT', {
             symbol: 'BTCUSDT',
-            bid: 100000,
-            ask: 102000,
-            spread: 2000,
+            price: 101000,
             timestamp: new Date()
         });
     }
@@ -77,7 +74,7 @@ export class TradingEngine{
         if (!marketData) {
             throw new Error(`Price data not available for ${symbol}`);
         }
-        const entry_price = side === 'buy' ? marketData.ask : marketData.bid
+        const entry_price = marketData.price
 
         const quantity = position_size / entry_price
 
@@ -116,23 +113,22 @@ export class TradingEngine{
                     ]);
 
                     if (bidPrice && askPrice && bidPrice > 0 && askPrice > 0) {
+                        const midPrice = (bidPrice + askPrice) / 2;
                         this.prices.set(symbol, {
                             symbol,
-                            bid: bidPrice,
-                            ask: askPrice,
-                            spread: askPrice - bidPrice,
+                            price: midPrice,
                             timestamp: new Date()
                         });
 
-                        console.log(`Updated ${symbol}: bid=${bidPrice}, ask=${askPrice}`);
+                        console.log(`Updated ${symbol}: price=${midPrice} (from bid=${bidPrice}, ask=${askPrice})`);
 
-                        this.updatePositionPrices(symbol, (bidPrice + askPrice) / 2);
+                        this.updatePositionPrices(symbol, midPrice);
                     } else {
                         console.warn(`Invalid price data for ${symbol}: bid=${bidPrice}, ask=${askPrice}. Using existing prices for position updates.`);
 
                         const existingPrice = this.prices.get(symbol);
                         if (existingPrice) {
-                            this.updatePositionPrices(symbol, (existingPrice.bid + existingPrice.ask) / 2);
+                            this.updatePositionPrices(symbol, existingPrice.price);
                         } else {
                             console.error(`No existing price data available for ${symbol}. Skipping position updates.`);
                         }
@@ -143,7 +139,7 @@ export class TradingEngine{
                     const existingPrice = this.prices.get(symbol);
                     if (existingPrice) {
                         console.warn(`Using existing price data for ${symbol} position updates due to fetch error.`);
-                        this.updatePositionPrices(symbol, (existingPrice.bid + existingPrice.ask) / 2);
+                        this.updatePositionPrices(symbol, existingPrice.price);
                     } else {
                         console.error(`No fallback price data available for ${symbol}. Positions cannot be updated.`);
                     }
@@ -188,14 +184,9 @@ export class TradingEngine{
         return false;
     }
 
-    getCurrentBidPrice(symbol: string): number | null {
+    getCurrentPrice(symbol: string): number | null {
         const marketPrice = this.prices.get(symbol);
-        return marketPrice?.bid || null;
-    }
-
-    getCurrentAskPrice(symbol: string): number | null {
-        const marketPrice = this.prices.get(symbol);
-        return marketPrice?.ask || null;
+        return marketPrice?.price || null;
     }
 
     getCurrentMarketPrice(symbol: string): MarketPrice | null {
