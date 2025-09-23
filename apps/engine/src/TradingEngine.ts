@@ -14,8 +14,7 @@ export class TradingEngine{
         this.config = {
             max_leverage: 100,
             max_position_size: 1000000,
-            max_positions_per_user: 10,
-            liquidation_buffer: 0.01
+            max_positions_per_user: 10
         }
         this.startPricePolling();
         this.loadInitialData();
@@ -164,7 +163,7 @@ export class TradingEngine{
                 position.margin_ratio = (position.margin + position.unrealized_pnl) / position.margin;
 
                 if (position.margin_ratio <= 0.01) {
-                    console.log(`🔥 Liquidating ${position.positionId}: Price=${currentPrice}, Liquidation=${position.liquidation_price.toFixed(2)}, Margin Ratio=${(position.margin_ratio * 100).toFixed(1)}%`);
+                    console.log(`Liquidating ${position.positionId}: Price=${currentPrice}, Liquidation=${position.liquidation_price.toFixed(2)}, Margin Ratio=${(position.margin_ratio * 100).toFixed(1)}%`);
                     this.liquidatePosition(position.positionId, 'margin_call');
                 }
             }
@@ -175,13 +174,6 @@ export class TradingEngine{
             ? position.current_price - position.entry_price
             : position.entry_price - position.current_price;
         return price_diff * position.quantity;
-    }
-    private checkPositionLiquidation(position:Position): boolean {
-        if (position.margin_ratio <= 0.01) {
-            this.liquidatePosition(position.positionId, 'margin_call');
-            return true;
-        }
-        return false;
     }
 
     getCurrentPrice(symbol: string): number | null {
@@ -225,7 +217,7 @@ export class TradingEngine{
 
         this.liquidations.push(liquidation);
 
-        console.log(`🔥 LIQUIDATION: Position ${positionId} | Loss: ${margin_lost.toFixed(2)} | No fees`);
+        this.positions.delete(positionId);
     }
 
     closePosition(positionId: string, userId: number): Position {
@@ -247,7 +239,7 @@ export class TradingEngine{
         position.realized_pnl = position.unrealized_pnl;
         position.closed_at = new Date();
 
-        console.log(`Position closed: ${positionId} | P&L: ${net_pnl.toFixed(2)}`);
+        this.positions.delete(positionId);
 
         return position;
     }
@@ -270,7 +262,6 @@ export class TradingEngine{
         };
 
         this.users.set(userId, newUser);
-        console.log(`Created new user: ${userId} (${username}) with balance ${startingBalance}`);
 
         return newUser;
     }

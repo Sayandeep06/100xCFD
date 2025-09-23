@@ -89,7 +89,6 @@ export interface LiquidationEvent {
 export interface TradingEngineConfig {
 
     max_leverage: number;
-    liquidation_buffer: number;
 
 
     max_position_size: number;
