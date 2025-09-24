@@ -4,8 +4,8 @@ export const tradesRouter: Router = express.Router()
 
 tradesRouter.post('/trade', async (req, res) => {
     try {
-        const { asset, type, margin, leverage, orderType} = req.body;
-        
+        const { asset, type, margin, leverage} = req.body;
+
         if (!asset || !type || !margin || !leverage) {
             return res.status(400).json({
                 message: "Missing required fields: asset, type, margin, leverage"
@@ -17,18 +17,15 @@ tradesRouter.post('/trade', async (req, res) => {
                 message: "Type must be 'buy' or 'sell'"
             });
         }
-
-        const side = type === 'buy' ? 'long' : 'short';
         
         const orderMessage = {
             action: 'place_order',
             data: {
                 userId: 1, 
                 symbol: asset.toUpperCase(),
-                side: side,
+                side: type,
                 margin: parseFloat(margin),
                 leverage: parseInt(leverage),
-                orderType: orderType // market order or limit order
             }
         };
 

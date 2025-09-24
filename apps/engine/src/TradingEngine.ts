@@ -50,7 +50,7 @@ export class TradingEngine{
             console.error('Error starting price polling:', error);
         });
     }
-    async placeOrder(
+    public async placeOrder(
         userId: number,
         symbol: string,
         side: 'buy'| 'sell',

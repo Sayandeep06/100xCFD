@@ -17,12 +17,15 @@ export class RedisManager{
     }
     public publishAndSubscribe(message: string){
         const id = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        const parsedMessage = JSON.parse(message);
+        const queueName = parsedMessage.action === 'create_user' ? 'User' : 'Order';
+
         return new Promise<any>((resolve)=>{
             this.subscriber.subscribe(id, (message)=>{
                 this.subscriber.unsubscribe(id)
                 resolve(JSON.parse(message))
             })
-            this.publisher.lPush('Order', JSON.stringify({id, message}))
+            this.publisher.lPush(queueName, JSON.stringify({id, message}))
         })
     }
 }

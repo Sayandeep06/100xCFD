@@ -17,5 +17,5 @@ app.use('/api/v1/user', userRouter);
 app.use('/api/v1/assets', assetsRouter)
 
 app.listen(8080, ()=>{
-    console.log(`API Server: http://localhost:3000`)
+    console.log(`API Server: http://localhost:8080`)
 })
