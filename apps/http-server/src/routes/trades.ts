@@ -35,7 +35,8 @@ tradesRouter.post('/trade', async (req, res) => {
         if (response.success) {
             res.status(200).json({
                 success: true,
-                orderId: response.data.orderId,
+                positionId: response.data.positionId,
+                orderId: response.data.positionId, // For backward compatibility
                 message: `${type.toUpperCase()} order placed successfully`
             });
         } else {

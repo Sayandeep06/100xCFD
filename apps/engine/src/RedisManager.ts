@@ -32,9 +32,12 @@ interface UserMessage {
 export class RedisManager{
     private static instance: RedisManager;
     private client: RedisClientType;
+    private publisher: RedisClientType
     constructor(){
         this.client = createClient();
         this.client.connect();
+        this.publisher = createClient();
+        this.publisher.connect()
     }
     public static getInstance(){
         if(!RedisManager.instance){
@@ -43,17 +46,49 @@ export class RedisManager{
     }
     private addOrder(){
         const interval = setInterval( async() => {
+            let queueData: string | null = null;
             try {
-                const queueData = await this.client.rPop('Order')
+                queueData = await this.client.rPop('Order')
+
                 if (!queueData) return;
 
                 const queueMessage: QueueMessage = JSON.parse(queueData)
+                const id = queueMessage.id
                 const orderMessage: OrderMessage = JSON.parse(queueMessage.message)
                 const order = orderMessage.data
 
-                await TradingEngine.getInstance().placeOrder(order.userId, order.symbol, order.side, order.margin, order.leverage)
+                const position = await TradingEngine.getInstance().placeOrder(order.userId, order.symbol, order.side, order.margin, order.leverage)
+
+                // Wrap response in expected format
+                const response = {
+                    success: true,
+                    data: {
+                        positionId: position.positionId,
+                        userId: position.userId,
+                        symbol: position.symbol,
+                        side: position.side,
+                        leverage: position.leverage,
+                        margin: position.margin,
+                        entry_price: position.entry_price
+                    }
+                }
+                await this.publisher.publish(id, JSON.stringify(response))
             } catch (error) {
                 console.error('Error processing order:', error)
+
+            
+                if (queueData) {
+                    try {
+                        const queueMessage: QueueMessage = JSON.parse(queueData)
+                        const errorResponse = {
+                            success: false,
+                            error: error instanceof Error ? error.message : 'Unknown error occurred'
+                        }
+                        await this.publisher.publish(queueMessage.id, JSON.stringify(errorResponse))
+                    } catch (publishError) {
+                        console.error('Error sending error response:', publishError)
+                    }
+                }
             }
         },1000)
     }
@@ -63,8 +98,9 @@ export class RedisManager{
     }
     private addUser(){
         const interval = setInterval( async() => {
+            let queueData: string | null = null;
             try {
-                const queueData = await this.client.rPop('User')
+                queueData = await this.client.rPop('User')
                 if (!queueData) return;
 
                 const queueMessage: QueueMessage = JSON.parse(queueData)
@@ -77,14 +113,26 @@ export class RedisManager{
                 const user = TradingEngine.getInstance().createUser(userId, userData.username, userData.startingBalance)
 
                 // Respond back to HTTP server via Redis pub/sub
-                await this.client.publish(queueMessage.id, JSON.stringify({
+                await this.publisher.publish(queueMessage.id, JSON.stringify({
                     success: true,
                     data: { userId: user.userId, username: user.username }
                 }))
 
             } catch (error) {
                 console.error('Error processing user creation:', error)
-                // TODO: Send error response back via Redis pub/sub if needed
+
+                if (queueData) {
+                    try {
+                        const queueMessage: QueueMessage = JSON.parse(queueData)
+                        const errorResponse = {
+                            success: false,
+                            error: error instanceof Error ? error.message : 'Unknown error occurred'
+                        }
+                        await this.publisher.publish(queueMessage.id, JSON.stringify(errorResponse))
+                    } catch (publishError) {
+                        console.error('Error sending error response:', publishError)
+                    }
+                }
             }
         },1000)
     }
