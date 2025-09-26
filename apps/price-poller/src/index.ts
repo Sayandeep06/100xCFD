@@ -33,16 +33,22 @@ export class Poller{
         this.ws.on('message',(message)=>{
             try{
                 const data: binanceData = JSON.parse(message.toString())
+                console.log(`Received from Binance: ${data.s} price=${data.p} qty=${data.q}`)
+
                 const tradeData: TradeData  = {
                     symbol: data.s,
                     price: parseFloat(data.p),
                     quantity: parseFloat(data.q),
                     trade_time: new Date(data.T),
                 }
+
+                console.log(`Sending to Redis toDB:`, tradeData)
                 RedisManager.getInstance().sendToDB(tradeData)
+
+                console.log(`Sending price to Redis priceToFE: ${data.p}`)
                 RedisManager.getInstance().sendPrice(data.p)
             }catch(error){
-                console.log(error)
+                console.log('Error processing Binance message:', error)
             }
         })
 

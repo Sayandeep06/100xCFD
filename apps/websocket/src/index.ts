@@ -284,3 +284,10 @@ class CandleWebSocketServer {
 }
 
 const server = CandleWebSocketServer.getInstance();
+
+// Keep the process running
+process.on('SIGINT', () => {
+    console.log('Shutting down WebSocket server...');
+    server.close();
+    process.exit(0);
+});

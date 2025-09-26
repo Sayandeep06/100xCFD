@@ -22,6 +22,5 @@ export class RedisManager{
     }
     public sendPrice(price: string){
         this.pusher.lPush('priceToFE', price)
-        this.pusher.lPush('priceToEngine', price)
     }
 }
