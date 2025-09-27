@@ -1,29 +1,37 @@
 import express, { Router } from 'express'
 import { RedisManager } from '../RedisManager';
+import { TradingEngine } from '../../../engine/src/TradingEngine';
 export const userRouter: Router = express.Router()
 
-// Magic link signup - send magic link to email
+// Password-based signup
 userRouter.post('/signup', async (req, res) => {
     try {
-        const { email, username } = req.body;
+        const { email, username, password } = req.body;
 
-        if (!email || !username) {
+        if (!email || !username || !password) {
             return res.status(400).json({
-                message: "Email and username are required"
+                message: "Email, username, and password are required"
             });
         }
 
-        // Generate magic link token (in production, use crypto.randomBytes)
-        const magicToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        // Check if username already exists
+        const existingUser = TradingEngine.getInstance().findUserByUsername(username);
+        if (existingUser) {
+            return res.status(400).json({
+                success: false,
+                message: "Username already exists"
+            });
+        }
 
-        // TODO: Send magic link email here
-        // await sendMagicLinkEmail(email, magicToken);
+        // Generate unique userId
+        const userId = Date.now();
 
-        // For demo, return the magic link
+        const user = TradingEngine.getInstance().createUser(userId, username, password, 10000);
+
         res.status(200).json({
             success: true,
-            message: "Magic link sent to email",
-            magicLink: `/verify?token=${magicToken}&email=${email}&username=${username}` // Remove in production
+            userId: user.userId,
+            message: "User created successfully"
         });
 
     } catch (error) {
@@ -34,48 +42,40 @@ userRouter.post('/signup', async (req, res) => {
     }
 });
 
-// Verify magic link and create user
-userRouter.get('/verify', async (req, res) => {
+// Password-based signin
+userRouter.post('/signin', async (req, res) => {
     try {
-        const { token, email, username } = req.query;
+        const { username, password } = req.body;
 
-        if (!token || !email || !username) {
+        if (!username || !password) {
             return res.status(400).json({
-                message: "Missing required parameters"
+                message: "Username and password are required"
             });
         }
 
-        // TODO: Validate magic link token here
+        const user = TradingEngine.getInstance().authenticateUser(username, password);
 
-        const userMessage = {
-            action: 'create_user',
-            data: {
-                email: email as string,
-                username: username as string,
-                startingBalance: 10000
-            }
-        };
-
-        const redisClient = RedisManager.getInstance();
-        const response = await redisClient.publishAndSubscribe(JSON.stringify(userMessage));
-
-        if (response.success) {
+        if (user) {
             res.status(200).json({
                 success: true,
-                userId: response.data.userId,
-                message: "User created successfully"
+                user: {
+                    userId: user.userId,
+                    username: user.username,
+                    balance: user.balances.usd.available
+                },
+                message: "Authentication successful"
             });
         } else {
-            res.status(400).json({
+            res.status(401).json({
                 success: false,
-                message: response.error || "Failed to create user"
+                message: "Invalid credentials"
             });
         }
 
     } catch (error) {
-        console.error('Error verifying user:', error);
+        console.error('Error in signin:', error);
         res.status(500).json({
-            message: "Error creating user"
+            message: "Error processing signin"
         });
     }
 });

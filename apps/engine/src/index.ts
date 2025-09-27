@@ -1,11 +1,13 @@
 import {TradingEngine} from "./TradingEngine";
 import {RedisManager} from "./RedisManager";
 
-// Initialize Trading Engine
+// Start the engine
 TradingEngine.getInstance();
 
-// Initialize and start Redis processing
 const redisManager = RedisManager.getInstance();
 redisManager.startOrderProcessing();
 redisManager.startUserProcessing();
+
+// Export for use by other packages
+export { TradingEngine } from "./TradingEngine";
 

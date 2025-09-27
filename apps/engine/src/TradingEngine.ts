@@ -244,7 +244,7 @@ export class TradingEngine{
         return position;
     }
 
-    createUser(userId: number, username: string, startingBalance: number = 10000): User {
+    createUser(userId: number, username: string, password: string, startingBalance: number = 10000): User {
         if (this.users.has(userId)) {
             throw new Error(`User with ID ${userId} already exists`);
         }
@@ -252,7 +252,7 @@ export class TradingEngine{
         const newUser: User = {
             userId,
             username,
-            password: '',
+            password,
             balances: {
                 usd: {
                     available: startingBalance,
@@ -264,6 +264,24 @@ export class TradingEngine{
         this.users.set(userId, newUser);
 
         return newUser;
+    }
+
+    authenticateUser(username: string, password: string): User | null {
+        for (const user of this.users.values()) {
+            if (user.username === username && user.password === password) {
+                return user;
+            }
+        }
+        return null;
+    }
+
+    findUserByUsername(username: string): User | null {
+        for (const user of this.users.values()) {
+            if (user.username === username) {
+                return user;
+            }
+        }
+        return null;
     }
 
     getUser(userId: number): User | undefined {

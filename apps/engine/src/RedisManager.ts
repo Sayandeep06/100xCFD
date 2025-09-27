@@ -22,6 +22,7 @@ interface QueueMessage {
 interface UserData {
     email: string;
     username: string;
+    password: string;
     startingBalance: number;
 }
 
@@ -59,7 +60,6 @@ export class RedisManager{
 
                 const position = await TradingEngine.getInstance().placeOrder(order.userId, order.symbol, order.side, order.margin, order.leverage)
 
-                // Wrap response in expected format
                 const response = {
                     success: true,
                     data: {
@@ -97,7 +97,7 @@ export class RedisManager{
         this.addOrder();
     }
     private addUser(){
-        const interval = setInterval( async() => {
+        setInterval( async() => {
             let queueData: string | null = null;
             try {
                 queueData = await this.client.rPop('User')
@@ -105,14 +105,21 @@ export class RedisManager{
 
                 const queueMessage: QueueMessage = JSON.parse(queueData)
                 const userMessage: UserMessage = JSON.parse(queueMessage.message)
-                const userData = userMessage.data
+                const userData = userMessage.data;
 
-                // Generate unique userId (in production, use better ID generation)
+                const existingUser = TradingEngine.getInstance().findUserByUsername(userData.username);
+                if (existingUser) {
+                    await this.publisher.publish(queueMessage.id, JSON.stringify({
+                        success: false,
+                        error: 'Username already exists'
+                    }));
+                    return;
+                }
+
                 const userId = Date.now();
 
-                const user = TradingEngine.getInstance().createUser(userId, userData.username, userData.startingBalance)
+                const user = TradingEngine.getInstance().createUser(userId, userData.username, userData.password, userData.startingBalance)
 
-                // Respond back to HTTP server via Redis pub/sub
                 await this.publisher.publish(queueMessage.id, JSON.stringify({
                     success: true,
                     data: { userId: user.userId, username: user.username }
