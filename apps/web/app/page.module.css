@@ -1,188 +1,1002 @@
-.page {
-  --gray-rgb: 0, 0, 0;
-  --gray-alpha-200: rgba(var(--gray-rgb), 0.08);
-  --gray-alpha-100: rgba(var(--gray-rgb), 0.05);
+/* Trading Platform Styles - Exness-like Design */
 
-  --button-primary-hover: #383838;
-  --button-secondary-hover: #f2f2f2;
-
-  display: grid;
-  grid-template-rows: 20px 1fr 20px;
-  align-items: center;
-  justify-items: center;
-  min-height: 100svh;
-  padding: 80px;
-  gap: 64px;
-  font-synthesis: none;
-}
-
-@media (prefers-color-scheme: dark) {
-  .page {
-    --gray-rgb: 255, 255, 255;
-    --gray-alpha-200: rgba(var(--gray-rgb), 0.145);
-    --gray-alpha-100: rgba(var(--gray-rgb), 0.06);
-
-    --button-primary-hover: #ccc;
-    --button-secondary-hover: #1a1a1a;
-  }
-}
-
-.main {
+.tradingPlatform {
   display: flex;
   flex-direction: column;
-  gap: 32px;
-  grid-row-start: 2;
+  height: 100vh;
+  background: #0f0f0f;
+  color: #ffffff;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+  overflow: hidden;
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+  -webkit-tap-highlight-color: transparent; /* Remove tap highlight */
+  touch-action: manipulation; /* Improve touch responsiveness */
+  user-select: none; /* Prevent text selection on mobile */
 }
 
-.main ol {
-  font-family: var(--font-geist-mono);
-  padding-left: 0;
-  margin: 0;
-  font-size: 14px;
-  line-height: 24px;
-  letter-spacing: -0.01em;
-  list-style-position: inside;
-}
-
-.main li:not(:last-of-type) {
-  margin-bottom: 8px;
-}
-
-.main code {
-  font-family: inherit;
-  background: var(--gray-alpha-100);
-  padding: 2px 4px;
-  border-radius: 4px;
-  font-weight: 600;
-}
-
-.ctas {
-  display: flex;
-  gap: 16px;
-}
-
-.ctas a {
-  appearance: none;
-  border-radius: 128px;
-  height: 48px;
-  padding: 0 20px;
-  border: none;
-  font-family: var(--font-geist-sans);
-  border: 1px solid transparent;
-  transition: background 0.2s, color 0.2s, border-color 0.2s;
-  cursor: pointer;
+/* Header */
+.header {
   display: flex;
   align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  line-height: 20px;
-  font-weight: 500;
-}
-
-a.primary {
-  background: var(--foreground);
-  color: var(--background);
-  gap: 8px;
-}
-
-a.secondary {
-  border-color: var(--gray-alpha-200);
-  min-width: 180px;
-}
-
-button.secondary {
-  appearance: none;
-  border-radius: 128px;
-  height: 48px;
-  padding: 0 20px;
-  border: none;
-  font-family: var(--font-geist-sans);
-  border: 1px solid transparent;
-  transition: background 0.2s, color 0.2s, border-color 0.2s;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 16px;
-  line-height: 20px;
-  font-weight: 500;
-  background: transparent;
-  border-color: var(--gray-alpha-200);
-  min-width: 180px;
-}
-
-.footer {
-  font-family: var(--font-geist-sans);
-  grid-row-start: 3;
-  display: flex;
-  gap: 24px;
-}
-
-.footer a {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.footer img {
+  justify-content: space-between;
+  background: #1a1a1a;
+  border-bottom: 1px solid #2a2a2a;
+  padding: 8px 16px;
+  height: 60px;
   flex-shrink: 0;
 }
 
-/* Enable hover only on non-touch devices */
-@media (hover: hover) and (pointer: fine) {
-  a.primary:hover {
-    background: var(--button-primary-hover);
-    border-color: transparent;
+.logo {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.logo h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  background: linear-gradient(45deg, #00ff88, #0088ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.connectionStatus {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+
+.status {
+  font-weight: 600;
+  font-size: 11px;
+}
+
+.connected {
+  color: #00ff88;
+}
+
+.disconnected {
+  color: #ff4444;
+}
+
+.error {
+  color: #ff4444;
+  font-weight: 600;
+  font-size: 11px;
+}
+
+.priceTicker {
+  display: flex;
+  gap: 24px;
+  flex: 1;
+  justify-content: center;
+  max-width: 800px;
+}
+
+.tickerItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 80px;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  min-height: 44px; /* iOS minimum tap target */
+  justify-content: center;
+}
+
+.tickerItem:hover {
+  background: #2a2a2a;
+}
+
+.tickerItem.active {
+  background: #00ff8820;
+  border: 1px solid #00ff88;
+}
+
+.symbol {
+  font-size: 12px;
+  font-weight: 600;
+  color: #888;
+  margin-bottom: 2px;
+}
+
+.price {
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 2px;
+}
+
+.change {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.positive {
+  color: #00ff88;
+}
+
+.negative {
+  color: #ff4444;
+}
+
+/* Main Content */
+.mainContent {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Chart Panel */
+.chartPanel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #1a1a1a;
+  border-right: 1px solid #2a2a2a;
+}
+
+.chartHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-bottom: 1px solid #2a2a2a;
+  background: #1a1a1a;
+}
+
+.chartHeader h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.chartControls {
+  display: flex;
+  gap: 8px;
+}
+
+.chartControls button {
+  background: #2a2a2a;
+  border: 1px solid #3a3a3a;
+  color: #ffffff;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.chartControls button:hover {
+  background: #3a3a3a;
+  border-color: #00ff88;
+}
+
+.chartControls button:active,
+.chartControls button.active {
+  background: #00ff88;
+  color: #000000;
+}
+
+.chartContainer {
+  flex: 1;
+  position: relative;
+  background: #1a1a1a;
+}
+
+/* Trading Panel */
+.tradingPanel {
+  width: 350px;
+  background: #161616;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid #2a2a2a;
+  flex-shrink: 0;
+}
+
+/* Order Form */
+.orderForm {
+  padding: 20px;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+.orderForm h3 {
+  margin: 0 0 20px 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.formGroup {
+  margin-bottom: 16px;
+}
+
+.formGroup label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #cccccc;
+}
+
+.formGroup select,
+.formGroup input {
+  width: 100%;
+  background: #2a2a2a;
+  border: 1px solid #3a3a3a;
+  color: #ffffff;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  transition: border-color 0.2s ease;
+  box-sizing: border-box;
+  -webkit-appearance: none;
+  appearance: none;
+  min-height: 44px; /* iOS minimum tap target */
+  touch-action: manipulation;
+}
+
+.formGroup select:focus,
+.formGroup input:focus {
+  outline: none;
+  border-color: #00ff88;
+}
+
+.currentPrice {
+  text-align: center;
+  margin: 20px 0;
+  padding: 12px;
+  background: #2a2a2a;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.tradeDetails {
+  background: #1e1e1e;
+  border: 1px solid #333;
+  border-radius: 6px;
+  padding: 12px;
+  margin: 16px 0;
+  font-size: 14px;
+}
+
+.tradeDetails > div {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  color: #ccc;
+}
+
+.tradeDetails > div:last-child {
+  margin-bottom: 0;
+}
+
+.tradeButtons {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.tradeButton {
+  flex: 1;
+  padding: 14px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  min-height: 44px; /* iOS minimum tap target */
+}
+
+.longButton {
+  background: linear-gradient(135deg, #00ff88, #00cc6a);
+  color: #000000;
+}
+
+.longButton:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 255, 136, 0.3);
+}
+
+.shortButton {
+  background: linear-gradient(135deg, #ff4444, #cc3333);
+  color: #ffffff;
+}
+
+.shortButton:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 68, 68, 0.3);
+}
+
+/* Positions Panel */
+.positionsPanel {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.positionsPanel h3 {
+  margin: 0 0 16px 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.positionsPanel p {
+  color: #888;
+  text-align: center;
+  margin-top: 40px;
+}
+
+.positionsList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.positionItem {
+  background: #2a2a2a;
+  border-radius: 8px;
+  padding: 16px;
+  border: 1px solid #3a3a3a;
+  transition: all 0.2s ease;
+}
+
+.positionItem:hover {
+  border-color: #4a4a4a;
+  background: #2d2d2d;
+}
+
+.positionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.positionSymbol {
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.positionType {
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.positionType.long {
+  background: #00ff8820;
+  color: #00ff88;
+  border: 1px solid #00ff88;
+}
+
+.positionType.short {
+  background: #ff444420;
+  color: #ff4444;
+  border: 1px solid #ff4444;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.closeButton:hover {
+  background: #ff444420;
+  color: #ff4444;
+}
+
+.positionDetails {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.positionDetails > div {
+  color: #cccccc;
+}
+
+.pnl {
+  grid-column: span 2;
+  text-align: center;
+  font-weight: 600;
+  font-size: 16px;
+  margin-top: 8px;
+  padding: 8px;
+  border-radius: 4px;
+}
+
+.pnl.positive {
+  background: #00ff8820;
+  color: #00ff88;
+}
+
+.pnl.negative {
+  background: #ff444420;
+  color: #ff4444;
+}
+
+/* Responsive Design */
+
+/* Large Desktop (1200px+) */
+@media (min-width: 1201px) {
+  .tradingPanel {
+    width: 380px;
   }
 
-  a.secondary:hover {
-    background: var(--button-secondary-hover);
-    border-color: transparent;
+  .priceTicker {
+    gap: 32px;
   }
 
-  .footer a:hover {
-    text-decoration: underline;
-    text-underline-offset: 4px;
+  .tickerItem {
+    min-width: 100px;
+    padding: 10px 20px;
+  }
+
+  .orderForm {
+    padding: 24px;
+  }
+
+  .positionsPanel {
+    padding: 24px;
   }
 }
 
-@media (max-width: 600px) {
-  .page {
-    padding: 32px;
-    padding-bottom: 80px;
+/* Tablet Landscape (1024px - 1200px) */
+@media (max-width: 1200px) and (min-width: 1025px) {
+  .tradingPanel {
+    width: 320px;
   }
 
-  .main {
+  .priceTicker {
+    gap: 20px;
+  }
+
+  .tickerItem {
+    min-width: 80px;
+    padding: 8px 16px;
+  }
+}
+
+/* Tablet Portrait (768px - 1024px) */
+@media (max-width: 1024px) and (min-width: 769px) {
+  .tradingPanel {
+    width: 280px;
+  }
+
+  .priceTicker {
+    gap: 16px;
+  }
+
+  .tickerItem {
+    min-width: 70px;
+    padding: 6px 12px;
+  }
+
+  .chartControls button {
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+
+  .orderForm h3 {
+    font-size: 16px;
+  }
+
+  .positionsPanel h3 {
+    font-size: 16px;
+  }
+}
+
+/* Mobile Landscape & Small Tablet (600px - 768px) */
+@media (max-width: 768px) {
+  .tradingPlatform {
+    height: 100dvh; /* Use dynamic viewport height for mobile */
+  }
+
+  .header {
+    height: auto;
+    min-height: 60px;
+    padding: 8px 12px;
+  }
+
+  .logo {
+    flex-direction: row;
     align-items: center;
+    gap: 16px;
   }
 
-  .main ol {
+  .logo h1 {
+    font-size: 20px;
+  }
+
+  .connectionStatus {
+    font-size: 10px;
+  }
+
+  .mainContent {
+    flex-direction: column;
+    height: calc(100dvh - 80px); /* Adjust for header */
+  }
+
+  .chartPanel {
+    height: 50vh;
+    border-right: none;
+    border-bottom: 1px solid #2a2a2a;
+  }
+
+  .chartHeader {
+    padding: 12px;
+  }
+
+  .chartHeader h2 {
+    font-size: 18px;
+  }
+
+  .chartControls {
+    gap: 4px;
+  }
+
+  .chartControls button {
+    padding: 4px 8px;
+    font-size: 10px;
+  }
+
+  .tradingPanel {
+    width: 100%;
+    height: 50vh;
+    border-left: none;
+    overflow-y: auto;
+  }
+
+  .orderForm {
+    padding: 16px;
+  }
+
+  .orderForm h3 {
+    font-size: 16px;
+    margin-bottom: 16px;
+  }
+
+  .formGroup {
+    margin-bottom: 12px;
+  }
+
+  .formGroup label {
+    font-size: 13px;
+  }
+
+  .formGroup select,
+  .formGroup input {
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+
+  .tradeButtons {
+    gap: 8px;
+  }
+
+  .tradeButton {
+    padding: 12px 16px;
+    font-size: 14px;
+  }
+
+  .positionsPanel {
+    padding: 16px;
+  }
+
+  .positionsPanel h3 {
+    font-size: 16px;
+  }
+
+  .positionItem {
+    padding: 12px;
+  }
+
+  .priceTicker {
+    gap: 12px;
+    padding: 8px 0;
+  }
+
+  .tickerItem {
+    min-width: 60px;
+    padding: 6px 10px;
+  }
+
+  .price {
+    font-size: 14px;
+  }
+
+  .symbol,
+  .change {
+    font-size: 10px;
+  }
+}
+
+/* Mobile Portrait (480px - 600px) */
+@media (max-width: 600px) {
+  .header {
+    flex-direction: column;
+    height: auto;
+    padding: 8px;
+    gap: 8px;
+  }
+
+  .logo {
+    flex-direction: column;
+    gap: 8px;
     text-align: center;
   }
 
-  .ctas {
-    flex-direction: column;
+  .logo h1 {
+    font-size: 18px;
   }
 
-  .ctas a {
-    font-size: 14px;
-    height: 40px;
-    padding: 0 16px;
-  }
-
-  a.secondary {
-    min-width: auto;
-  }
-
-  .footer {
-    flex-wrap: wrap;
-    align-items: center;
+  .connectionStatus {
     justify-content: center;
+  }
+
+  .priceTicker {
+    justify-content: center;
+    overflow-x: auto;
+    padding: 8px 4px;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+  }
+
+  .priceTicker::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Opera */
+  }
+
+  .mainContent {
+    height: calc(100dvh - 120px); /* Adjust for larger header */
+  }
+
+  .chartPanel {
+    height: 45vh;
+  }
+
+  .tradingPanel {
+    height: 55vh;
+  }
+
+  .tradeButtons {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .tradeButton {
+    width: 100%;
+    padding: 14px;
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  .positionDetails {
+    grid-template-columns: 1fr;
+    gap: 6px;
+  }
+
+  .pnl {
+    grid-column: span 1;
+    margin-top: 6px;
+  }
+
+  .positionHeader {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .currentPrice {
+    margin: 16px 0;
+    padding: 10px;
+    font-size: 14px;
   }
 }
 
-@media (prefers-color-scheme: dark) {
-  .logo {
-    filter: invert();
+/* Small Mobile (360px - 480px) */
+@media (max-width: 480px) {
+  .logo h1 {
+    font-size: 16px;
   }
+
+  .tickerItem {
+    min-width: 50px;
+    padding: 4px 8px;
+  }
+
+  .price {
+    font-size: 12px;
+  }
+
+  .symbol,
+  .change {
+    font-size: 9px;
+  }
+
+  .chartHeader h2 {
+    font-size: 16px;
+  }
+
+  .chartControls button {
+    padding: 3px 6px;
+    font-size: 9px;
+  }
+
+  .orderForm {
+    padding: 12px;
+  }
+
+  .orderForm h3 {
+    font-size: 14px;
+  }
+
+  .formGroup label {
+    font-size: 12px;
+  }
+
+  .formGroup select,
+  .formGroup input {
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+
+  .tradeButton {
+    padding: 12px;
+    font-size: 14px;
+  }
+
+  .positionsPanel {
+    padding: 12px;
+  }
+
+  .positionItem {
+    padding: 10px;
+  }
+
+  .positionSymbol {
+    font-size: 14px;
+  }
+
+  .positionDetails {
+    font-size: 12px;
+  }
+}
+
+/* Very Small Mobile (below 360px) */
+@media (max-width: 360px) {
+  .tradingPlatform {
+    min-width: 320px;
+  }
+
+  .header {
+    padding: 6px;
+  }
+
+  .logo h1 {
+    font-size: 14px;
+  }
+
+  .priceTicker {
+    gap: 8px;
+  }
+
+  .tickerItem {
+    min-width: 45px;
+    padding: 3px 6px;
+  }
+
+  .price {
+    font-size: 11px;
+  }
+
+  .symbol,
+  .change {
+    font-size: 8px;
+  }
+
+  .chartHeader {
+    padding: 8px;
+  }
+
+  .chartHeader h2 {
+    font-size: 14px;
+  }
+
+  .orderForm,
+  .positionsPanel {
+    padding: 10px;
+  }
+
+  .formGroup {
+    margin-bottom: 10px;
+  }
+
+  .tradeButton {
+    padding: 10px;
+    font-size: 13px;
+  }
+}
+
+/* Landscape orientation specific adjustments */
+@media (max-height: 600px) and (orientation: landscape) {
+  .tradingPlatform {
+    height: 100vh;
+  }
+
+  .header {
+    height: 50px;
+    padding: 4px 8px;
+  }
+
+  .logo h1 {
+    font-size: 16px;
+  }
+
+  .mainContent {
+    height: calc(100vh - 50px);
+    flex-direction: row;
+  }
+
+  .chartPanel {
+    height: 100%;
+    width: 60%;
+  }
+
+  .tradingPanel {
+    height: 100%;
+    width: 40%;
+    min-width: 280px;
+  }
+
+  .priceTicker {
+    gap: 8px;
+  }
+
+  .tickerItem {
+    padding: 4px 8px;
+  }
+}
+
+/* High DPI displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  .logo h1 {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  .tickerItem,
+  .tradeButton,
+  .positionItem {
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+/* Hover states only for devices that support hover */
+@media (hover: hover) and (pointer: fine) {
+  .tickerItem:hover,
+  .tradeButton:hover,
+  .chartControls button:hover,
+  .positionItem:hover {
+    transition: all 0.2s ease;
+  }
+}
+
+/* Remove hover effects on touch devices */
+@media (hover: none) and (pointer: coarse) {
+  .tickerItem:hover,
+  .tradeButton:hover,
+  .chartControls button:hover,
+  .positionItem:hover {
+    background: inherit;
+    transform: none;
+    box-shadow: none;
+  }
+
+  .tradeButton:active {
+    transform: scale(0.98);
+  }
+
+  .tickerItem:active {
+    background: #2a2a2a;
+  }
+}
+
+/* Scrollbar Styling */
+.positionsPanel::-webkit-scrollbar {
+  width: 6px;
+}
+
+.positionsPanel::-webkit-scrollbar-track {
+  background: #1a1a1a;
+}
+
+.positionsPanel::-webkit-scrollbar-thumb {
+  background: #3a3a3a;
+  border-radius: 3px;
+}
+
+.positionsPanel::-webkit-scrollbar-thumb:hover {
+  background: #4a4a4a;
+}
+
+/* User Authentication Styles */
+.userSection {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.userInfo {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  padding: 8px 12px;
+  background: #2a2a2a;
+  border-radius: 6px;
+  border: 1px solid #3a3a3a;
+}
+
+.username {
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.balance {
+  color: #00ff88;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.loginButton,
+.logoutButton {
+  background: #0066cc;
+  color: #ffffff;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.loginButton:hover,
+.logoutButton:hover {
+  background: #0052a3;
+}
+
+.logoutButton {
+  background: #ff4444;
+  font-size: 12px;
+  padding: 6px 12px;
+}
+
+.logoutButton:hover {
+  background: #cc3333;
 }
