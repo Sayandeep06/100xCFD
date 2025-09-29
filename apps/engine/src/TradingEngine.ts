@@ -12,12 +12,14 @@ export class TradingEngine{
 
     private constructor(){
         this.config = {
-            max_leverage: 100,
-            max_position_size: 1000000,
+            max_leverage: 999999, // Essentially unlimited for testing
+            max_position_size: 100000000,
             max_positions_per_user: 10
         }
         this.startPricePolling();
         this.loadInitialData();
+
+        // Artificial price drop removed - testing with extreme leverage instead
     }
     public static getInstance(){
         if(!this.instance){
@@ -59,9 +61,10 @@ export class TradingEngine{
     ){
         const user = this.users.get(userId)
         if(!user)   throw new Error("User not found")
-        if(leverage > this.config.max_leverage){
-            throw new Error(`Max leverage is ${this.config.max_leverage}x`)
-        }
+        // Max leverage validation removed for testing
+        // if(leverage > this.config.max_leverage){
+        //     throw new Error(`Max leverage is ${this.config.max_leverage}x`)
+        // }
         if (user.balances.usd.available < margin) {
             throw new Error(`Insufficient balance. Available: $${user.balances.usd.available}, Required: $${margin}`);
         }
@@ -303,5 +306,16 @@ export class TradingEngine{
 
     getLiquidations(): LiquidationEvent[] {
         return this.liquidations;
+    }
+
+    // Test method to manually update price for liquidation testing
+    testPriceUpdate(symbol: string, newPrice: number): void {
+        console.log(`TEST: Manually updating ${symbol} price to ${newPrice}`);
+        this.prices.set(symbol, {
+            symbol,
+            price: newPrice,
+            timestamp: new Date()
+        });
+        this.updatePositionPrices(symbol, newPrice);
     }
 }

@@ -17,7 +17,7 @@ const jetBrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Trading Platform - Real-time Crypto Trading",
+  title: "100xCFD",
   description: "Professional trading platform with real-time charts, live prices, and trading functionality",
   viewport: "width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no",
   themeColor: "#1a1a1a",

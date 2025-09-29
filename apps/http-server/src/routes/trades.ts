@@ -116,3 +116,31 @@ tradesRouter.post('/trade', async (req, res) => {
         });
     }
 });
+
+// Test endpoint for liquidation testing
+tradesRouter.post('/test-price-update', async (req, res) => {
+    try {
+        const { symbol, price } = req.body;
+
+        if (!symbol || !price) {
+            return res.status(400).json({
+                message: "Missing required fields: symbol, price"
+            });
+        }
+
+        const tradingEngine = TradingEngine.getInstance();
+        tradingEngine.testPriceUpdate(symbol, parseFloat(price));
+
+        res.status(200).json({
+            success: true,
+            message: `Price updated to ${price} for ${symbol}`,
+            newPrice: parseFloat(price)
+        });
+
+    } catch (error) {
+        console.error('Error updating test price:', error);
+        res.status(500).json({
+            message: "Error updating test price"
+        });
+    }
+});

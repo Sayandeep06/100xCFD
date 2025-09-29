@@ -53,12 +53,15 @@ export class RedisManager{
 
                 if (!queueData) return;
 
+                console.log('ENGINE: Processing order from Redis queue:', queueData);
                 const queueMessage: QueueMessage = JSON.parse(queueData)
                 const id = queueMessage.id
                 const orderMessage: OrderMessage = JSON.parse(queueMessage.message)
                 const order = orderMessage.data
+                console.log('ENGINE: Parsed order data:', order);
 
                 const position = await TradingEngine.getInstance().placeOrder(order.userId, order.symbol, order.side, order.margin, order.leverage)
+                console.log('ENGINE: Position created:', position.positionId);
 
                 const response = {
                     success: true,

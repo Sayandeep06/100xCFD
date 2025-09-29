@@ -67,6 +67,7 @@ export default function TradingPlatform() {
     balance: 20000
   });
   const [isOrderFormCollapsed, setIsOrderFormCollapsed] = useState(false);
+  const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   // Always use real backend with selected timeframe
   const { priceData, candleData, isConnected, error, placeTrade } = useActualBackend(selectedTimeframe);
 
@@ -177,11 +178,16 @@ export default function TradingPlatform() {
     if (!user) return;
 
     try {
+      console.log('Fetching positions for user:', user.userId);
       const response = await fetch(`http://localhost:8080/api/v1/trades/positions/${user.userId}`);
       const data = await response.json();
+      console.log('Positions response:', data);
 
       if (data.success) {
+        console.log('Setting positions:', data.positions);
         setPositions(data.positions);
+      } else {
+        console.warn('Failed to fetch positions:', data.message);
       }
     } catch (error) {
       console.error('Error fetching positions:', error);
@@ -191,14 +197,19 @@ export default function TradingPlatform() {
   // Fetch user data from backend
   const fetchUserData = async () => {
     try {
+      console.log('Fetching user data for user:', user.userId);
       const response = await fetch(`http://localhost:8080/api/v1/user/data/${user.userId}`);
       const data = await response.json();
+      console.log('User data response:', data);
 
       if (data.success) {
+        console.log('Updating user balance from', user.balance, 'to', data.user.balance);
         setUser(prev => ({
           ...prev,
           balance: data.user.balance
         }));
+      } else {
+        console.warn('Failed to fetch user data:', data.message);
       }
     } catch (error) {
       console.error('Error fetching user data:', error);
@@ -221,11 +232,29 @@ export default function TradingPlatform() {
 
   // Trading functions
   const executeTrade = async (type: 'long' | 'short') => {
-    const currentPrice = priceData[selectedSymbol]?.price || 0;
-    if (!currentPrice) {
-      alert('Price data not available');
+    console.log('=== Order Placement Debug ===');
+    console.log('isPlacingOrder:', isPlacingOrder);
+    console.log('isConnected:', isConnected);
+    console.log('priceData:', priceData);
+    console.log('selectedSymbol:', selectedSymbol);
+
+    // Prevent multiple concurrent orders
+    if (isPlacingOrder) {
+      console.log('Order already in progress, ignoring click');
       return;
     }
+
+    const currentPrice = priceData[selectedSymbol]?.price || 0;
+    console.log('Current price for', selectedSymbol, ':', currentPrice);
+
+    // Simplified validation - just check if we have some price data
+    if (!currentPrice || currentPrice <= 0) {
+      console.warn('Price validation failed - price:', currentPrice);
+      alert('Price data not available. Current price: ' + currentPrice);
+      return;
+    }
+
+    setIsPlacingOrder(true);
 
     // Calculate position size and quantity based on margin and leverage
     const positionSize = marginAmount * leverage;
@@ -233,6 +262,14 @@ export default function TradingPlatform() {
 
     // Send order to backend with authentication
     try {
+      console.log('Placing order:', {
+        userId: user.userId,
+        asset: selectedSymbol,
+        type: type === 'long' ? 'buy' : 'sell',
+        margin: marginAmount,
+        leverage: leverage
+      });
+
       const response = await fetch('http://localhost:8080/api/v1/trades/trade', {
         method: 'POST',
         headers: {
@@ -248,12 +285,17 @@ export default function TradingPlatform() {
       });
 
       const result = await response.json();
+      console.log('Order response:', result);
 
       if (result.success) {
         console.log('Trade placed successfully:', result.message);
-        // Refresh positions and user data
-        fetchPositions();
-        fetchUserData();
+        alert(`✅ Order placed successfully! ${result.message}`);
+        // Add delay to allow backend to process the order
+        setTimeout(() => {
+          console.log('Refreshing positions and user data...');
+          fetchPositions();
+          fetchUserData();
+        }, 1000);
       } else {
         console.error('Trade failed:', result.message);
         alert(`Trade failed: ${result.message}`);
@@ -261,6 +303,8 @@ export default function TradingPlatform() {
     } catch (error) {
       console.error('Error placing trade:', error);
       alert('Failed to place trade. Please try again.');
+    } finally {
+      setIsPlacingOrder(false);
     }
   };
 
@@ -311,13 +355,8 @@ export default function TradingPlatform() {
           {error && <span className={styles.error}>⚠ {error}</span>}
         </div>
 
-        <div className={styles.userSection}>
-          <div className={styles.userInfo}>
-            <span className={styles.username}>{user.username}</span>
-            <span className={styles.balance}>${user.balance.toFixed(2)}</span>
-          </div>
-        </div>
-        <div className={styles.priceTicker}>
+        <div className={styles.centerSection}>
+          <div className={styles.priceTicker}>
           {symbols.map(symbol => {
             const price = priceData[symbol];
             return (
@@ -339,6 +378,17 @@ export default function TradingPlatform() {
               </div>
             );
           })}
+          </div>
+        </div>
+
+        <div className={styles.userSection}>
+          <div className={styles.userInfo}>
+            <span className={styles.username}>{user.username}</span>
+            <span className={styles.balance}>${user.balance.toFixed(2)}</span>
+          </div>
+          <button className={styles.logoutButton}>
+            Logout
+          </button>
         </div>
       </header>
 
@@ -439,6 +489,12 @@ export default function TradingPlatform() {
                 <option value={20}>20x</option>
                 <option value={50}>50x</option>
                 <option value={100}>100x</option>
+                <option value={200}>200x</option>
+                <option value={500}>500x</option>
+                <option value={1000}>1,000x</option>
+                <option value={5000}>5,000x</option>
+                <option value={10000}>10,000x</option>
+                <option value={50000}>50,000x</option>
               </select>
             </div>
 
@@ -465,14 +521,16 @@ export default function TradingPlatform() {
               <button
                 className={`${styles.tradeButton} ${styles.longButton}`}
                 onClick={() => executeTrade('long')}
+                disabled={isPlacingOrder}
               >
-                Long / Buy
+                {isPlacingOrder ? 'Placing...' : 'Long / Buy'}
               </button>
               <button
                 className={`${styles.tradeButton} ${styles.shortButton}`}
                 onClick={() => executeTrade('short')}
+                disabled={isPlacingOrder}
               >
-                Short / Sell
+                {isPlacingOrder ? 'Placing...' : 'Short / Sell'}
               </button>
             </div>
             </div>
