@@ -28,4 +28,15 @@ export class RedisManager{
             this.publisher.lPush(queueName, JSON.stringify({id, message}))
         })
     }
+
+    public async getLatestPrice(): Promise<string | null> {
+        try {
+            // Get the latest price from the 'priceToFE' queue
+            const result = await this.publisher.lRange('priceToFE', -1, -1);
+            return result.length > 0 ? result[0] : null;
+        } catch (error) {
+            console.error('Error fetching latest price from Redis:', error);
+            return null;
+        }
+    }
 }

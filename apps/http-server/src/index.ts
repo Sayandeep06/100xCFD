@@ -15,6 +15,7 @@ app.use(express.json())
 app.use('/api/v1/trades', tradesRouter);
 app.use('/api/v1/user', userRouter);
 app.use('/api/v1/assets', assetsRouter)
+app.use('/api/v1/prices', assetsRouter) // Alias for price endpoints
 
 app.listen(8080, ()=>{
     console.log(`API Server: http://localhost:8080`)

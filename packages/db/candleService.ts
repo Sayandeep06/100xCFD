@@ -75,9 +75,45 @@ export class CandleService {
             current = new Date(current.getTime() + interval)
         }return candles
     }
+    static async get15MinCandles(symbol:string, from: Date, to: Date): Promise<Candle[]> {
+        const candles: Candle[] = []
+        const interval = 60 * 1000 * 15
+
+        let current = this.getClosestTime(from, interval)
+        const end = this.getClosestTime(to, interval)
+
+        while(current <= end){
+            const candleEnd = new Date(current.getTime() + interval)
+            const candle = await this.getCandles(symbol, current, candleEnd)
+
+            if(candle){
+                candles.push(candle)
+            }
+
+            current = new Date(current.getTime() + interval)
+        }return candles
+    }
     static async get1HrCandles(symbol:string, from: Date, to: Date): Promise<Candle[]> {
         const candles: Candle[] = []
         const interval = 60 * 1000 * 60
+
+        let current = this.getClosestTime(from, interval)
+        const end = this.getClosestTime(to, interval)
+
+        while(current <= end){
+            const candleEnd = new Date(current.getTime() + interval)
+            const candle = await this.getCandles(symbol, current, candleEnd)
+
+            if(candle){
+                candles.push(candle)
+            }
+
+            current = new Date(current.getTime() + interval)
+        }return candles
+    }
+    static async get4HrCandles(symbol:string, from: Date, to: Date): Promise<Candle[]> {
+        const candles: Candle[] = []
+        const interval = 60 * 1000 * 60 * 4
 
         let current = this.getClosestTime(from, interval)
         const end = this.getClosestTime(to, interval)

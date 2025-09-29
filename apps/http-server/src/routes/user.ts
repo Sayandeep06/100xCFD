@@ -1,9 +1,7 @@
 import express, { Router } from 'express'
-import { RedisManager } from '../RedisManager';
-import { TradingEngine } from '../../../engine/src/TradingEngine';
+import { TradingEngine } from 'engine';
 export const userRouter: Router = express.Router()
 
-// Password-based signup
 userRouter.post('/signup', async (req, res) => {
     try {
         const { email, username, password } = req.body;
@@ -14,7 +12,6 @@ userRouter.post('/signup', async (req, res) => {
             });
         }
 
-        // Check if username already exists
         const existingUser = TradingEngine.getInstance().findUserByUsername(username);
         if (existingUser) {
             return res.status(400).json({
@@ -23,11 +20,9 @@ userRouter.post('/signup', async (req, res) => {
             });
         }
 
-        // Generate unique userId
         const userId = Date.now();
 
         const user = TradingEngine.getInstance().createUser(userId, username, password, 10000);
-
         res.status(200).json({
             success: true,
             userId: user.userId,
@@ -42,7 +37,6 @@ userRouter.post('/signup', async (req, res) => {
     }
 });
 
-// Password-based signin
 userRouter.post('/signin', async (req, res) => {
     try {
         const { username, password } = req.body;
@@ -76,6 +70,42 @@ userRouter.post('/signin', async (req, res) => {
         console.error('Error in signin:', error);
         res.status(500).json({
             message: "Error processing signin"
+        });
+    }
+});
+
+userRouter.get('/data/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
+
+        if (!userId) {
+            return res.status(400).json({
+                message: "User ID is required"
+            });
+        }
+
+        const user = TradingEngine.getInstance().getUser(parseInt(userId));
+
+        if (user) {
+            res.status(200).json({
+                success: true,
+                user: {
+                    userId: user.userId,
+                    username: user.username,
+                    balance: user.balances.usd.available
+                }
+            });
+        } else {
+            res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+
+    } catch (error) {
+        console.error('Error fetching user data:', error);
+        res.status(500).json({
+            message: "Error fetching user data"
         });
     }
 });

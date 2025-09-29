@@ -1,17 +1,15 @@
-/* Trading Platform Styles - Exness-like Design */
+/* Modern Exchange Trading Platform */
 
 .tradingPlatform {
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background: #0f0f0f;
+  background: #0a0e16;
   color: #ffffff;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
+  font-family: var(--font-inter), system-ui, -apple-system, sans-serif;
   overflow: hidden;
-  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
-  -webkit-tap-highlight-color: transparent; /* Remove tap highlight */
-  touch-action: manipulation; /* Improve touch responsiveness */
-  user-select: none; /* Prevent text selection on mobile */
+  font-weight: 400;
+  line-height: 1.5;
 }
 
 /* Header */
@@ -19,259 +17,327 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #1a1a1a;
-  border-bottom: 1px solid #2a2a2a;
-  padding: 8px 16px;
-  height: 60px;
+  background: #151b23;
+  border-bottom: 1px solid #252d38;
+  padding: 0 24px;
+  height: 64px;
   flex-shrink: 0;
+  position: relative;
+  z-index: 10;
 }
 
 .logo {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  align-items: center;
+  gap: 12px;
 }
 
 .logo h1 {
   margin: 0;
-  font-size: 24px;
+  font-size: 28px;
   font-weight: 700;
-  background: linear-gradient(45deg, #00ff88, #0088ff);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  color: #ffffff;
+  letter-spacing: -0.03em;
+  font-family: var(--font-mono);
 }
 
 .connectionStatus {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 11px;
+  font-size: 12px;
+  background: #1f2733;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid #252d38;
 }
 
 .status {
-  font-weight: 600;
-  font-size: 11px;
+  font-weight: 500;
+  font-size: 12px;
 }
 
 .connected {
-  color: #00ff88;
+  color: #10b981;
 }
 
 .disconnected {
-  color: #ff4444;
+  color: #ef4444;
 }
 
 .error {
-  color: #ff4444;
-  font-weight: 600;
-  font-size: 11px;
+  color: #ef4444;
+  font-weight: 500;
+  font-size: 12px;
 }
 
 .priceTicker {
   display: flex;
-  gap: 24px;
+  gap: 4px;
   flex: 1;
   justify-content: center;
-  max-width: 800px;
+  max-width: 600px;
 }
 
 .tickerItem {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 8px 16px;
-  border-radius: 6px;
+  padding: 12px 20px;
+  border-radius: 8px;
   cursor: pointer;
-  transition: all 0.2s ease;
-  min-width: 80px;
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
-  min-height: 44px; /* iOS minimum tap target */
+  transition: all 0.15s ease;
+  min-width: 120px;
+  background: #1f2733;
+  border: 1px solid #252d38;
   justify-content: center;
 }
 
 .tickerItem:hover {
-  background: #2a2a2a;
+  background: #252d38;
+  border-color: #374151;
 }
 
 .tickerItem.active {
-  background: #00ff8820;
-  border: 1px solid #00ff88;
+  background: #1f2937;
+  border-color: #10b981;
+  box-shadow: 0 0 0 1px rgba(16, 185, 129, 0.2);
 }
 
 .symbol {
-  font-size: 12px;
-  font-weight: 600;
-  color: #888;
-  margin-bottom: 2px;
+  font-size: 11px;
+  font-weight: 500;
+  color: #9ca3af;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .price {
-  font-size: 16px;
-  font-weight: 700;
+  font-family: var(--font-mono);
+  font-size: 15px;
+  font-weight: 600;
   color: #ffffff;
-  margin-bottom: 2px;
+  margin-bottom: 4px;
+  letter-spacing: -0.01em;
 }
 
 .change {
-  font-size: 12px;
-  font-weight: 600;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
 }
 
 .positive {
-  color: #00ff88;
+  color: #10b981;
 }
 
 .negative {
-  color: #ff4444;
+  color: #ef4444;
 }
 
 /* Main Content */
 .mainContent {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 400px;
+  grid-template-rows: 1fr;
+  gap: 1px;
   flex: 1;
   overflow: hidden;
+  background: #252d38;
 }
 
 /* Chart Panel */
 .chartPanel {
-  flex: 1;
   display: flex;
   flex-direction: column;
-  background: #1a1a1a;
-  border-right: 1px solid #2a2a2a;
+  background: #151b23;
+  overflow: hidden;
 }
 
 .chartHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px;
-  border-bottom: 1px solid #2a2a2a;
-  background: #1a1a1a;
+  padding: 20px 24px;
+  border-bottom: 1px solid #252d38;
+  background: #151b23;
 }
 
 .chartHeader h2 {
   margin: 0;
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 600;
+  color: #ffffff;
+  letter-spacing: -0.01em;
 }
 
 .chartControls {
   display: flex;
-  gap: 8px;
+  gap: 2px;
+  background: #1f2733;
+  border-radius: 8px;
+  padding: 4px;
+  border: 1px solid #252d38;
 }
 
 .chartControls button {
-  background: #2a2a2a;
-  border: 1px solid #3a3a3a;
-  color: #ffffff;
-  padding: 6px 12px;
-  border-radius: 4px;
+  background: transparent;
+  border: none;
+  color: #9ca3af;
+  padding: 8px 16px;
+  border-radius: 6px;
   cursor: pointer;
   font-size: 12px;
   font-weight: 500;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
+  font-family: var(--font-mono);
 }
 
 .chartControls button:hover {
-  background: #3a3a3a;
-  border-color: #00ff88;
+  background: #252d38;
+  color: #ffffff;
 }
 
-.chartControls button:active,
 .chartControls button.active {
-  background: #00ff88;
-  color: #000000;
+  background: #10b981;
+  color: #ffffff;
+  font-weight: 600;
 }
 
 .chartContainer {
   flex: 1;
   position: relative;
-  background: #1a1a1a;
+  background: #151b23;
+  padding: 20px;
+  box-sizing: border-box;
+  min-height: 0;
 }
 
 /* Trading Panel */
 .tradingPanel {
-  width: 350px;
-  background: #161616;
   display: flex;
   flex-direction: column;
-  border-left: 1px solid #2a2a2a;
-  flex-shrink: 0;
+  background: #151b23;
+  overflow-y: auto;
+  max-height: 100%;
 }
 
 /* Order Form */
 .orderForm {
-  padding: 20px;
-  border-bottom: 1px solid #2a2a2a;
+  flex-shrink: 0;
+  border-bottom: 1px solid #252d38;
 }
 
-.orderForm h3 {
-  margin: 0 0 20px 0;
-  font-size: 18px;
+.orderFormHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  cursor: pointer;
+  background: #151b23;
+  border-bottom: 1px solid #252d38;
+  transition: background-color 0.15s ease;
+}
+
+.orderFormHeader:hover {
+  background: #1a2028;
+}
+
+.orderFormHeader h3 {
+  margin: 0;
+  font-size: 16px;
   font-weight: 600;
+  color: #ffffff;
+  letter-spacing: -0.01em;
+}
+
+.expandIcon {
+  color: #9ca3af;
+  font-size: 18px;
+  transition: transform 0.15s ease;
+}
+
+.expandIcon.collapsed {
+  transform: rotate(-90deg);
+}
+
+.orderFormContent {
+  padding: 24px;
+  transition: all 0.3s ease;
+  overflow: hidden;
+}
+
+.orderFormContent.collapsed {
+  max-height: 0;
+  padding: 0 24px;
 }
 
 .formGroup {
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 
 .formGroup label {
   display: block;
-  margin-bottom: 6px;
-  font-size: 14px;
+  margin-bottom: 8px;
+  font-size: 13px;
   font-weight: 500;
-  color: #cccccc;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .formGroup select,
 .formGroup input {
   width: 100%;
-  background: #2a2a2a;
-  border: 1px solid #3a3a3a;
+  background: #1f2733;
+  border: 1px solid #374151;
   color: #ffffff;
-  padding: 10px 12px;
-  border-radius: 6px;
+  padding: 12px 16px;
+  border-radius: 8px;
   font-size: 14px;
-  transition: border-color 0.2s ease;
+  font-family: var(--font-mono);
+  transition: all 0.15s ease;
   box-sizing: border-box;
-  -webkit-appearance: none;
   appearance: none;
-  min-height: 44px; /* iOS minimum tap target */
-  touch-action: manipulation;
 }
 
 .formGroup select:focus,
 .formGroup input:focus {
   outline: none;
-  border-color: #00ff88;
+  border-color: #10b981;
+  background: #252d38;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
 }
 
 .currentPrice {
   text-align: center;
-  margin: 20px 0;
-  padding: 12px;
-  background: #2a2a2a;
-  border-radius: 6px;
+  margin: 24px 0;
+  padding: 16px;
+  background: #1f2733;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  font-family: var(--font-mono);
   font-weight: 600;
+  font-size: 16px;
+  color: #ffffff;
 }
 
 .tradeDetails {
-  background: #1e1e1e;
-  border: 1px solid #333;
-  border-radius: 6px;
-  padding: 12px;
-  margin: 16px 0;
-  font-size: 14px;
+  background: #1f2733;
+  border: 1px solid #374151;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 20px 0;
+  font-family: var(--font-mono);
+  font-size: 13px;
 }
 
 .tradeDetails > div {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 8px;
-  color: #ccc;
+  margin-bottom: 12px;
+  color: #9ca3af;
 }
 
 .tradeDetails > div:last-child {
@@ -281,56 +347,57 @@
 .tradeButtons {
   display: flex;
   gap: 12px;
-  margin-top: 20px;
+  margin-top: 24px;
 }
 
 .tradeButton {
   flex: 1;
-  padding: 14px 20px;
+  padding: 16px 24px;
   border: none;
-  border-radius: 6px;
-  font-size: 16px;
+  border-radius: 8px;
+  font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
-  min-height: 44px; /* iOS minimum tap target */
+  letter-spacing: 0.05em;
+  font-family: var(--font-inter);
 }
 
 .longButton {
-  background: linear-gradient(135deg, #00ff88, #00cc6a);
-  color: #000000;
+  background: #10b981;
+  color: #ffffff;
 }
 
 .longButton:hover {
+  background: #059669;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 255, 136, 0.3);
 }
 
 .shortButton {
-  background: linear-gradient(135deg, #ff4444, #cc3333);
+  background: #ef4444;
   color: #ffffff;
 }
 
 .shortButton:hover {
+  background: #dc2626;
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(255, 68, 68, 0.3);
 }
 
 /* Positions Panel */
 .positionsPanel {
   flex: 1;
-  padding: 20px;
+  padding: 24px;
   overflow-y: auto;
+  min-height: 0;
 }
 
 .positionsPanel h3 {
-  margin: 0 0 16px 0;
-  font-size: 18px;
+  margin: 0 0 20px 0;
+  font-size: 16px;
   font-weight: 600;
+  color: #ffffff;
+  letter-spacing: -0.01em;
 }
 
 .positionsPanel p {
@@ -362,60 +429,70 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 12px;
+  margin-bottom: 16px;
+}
+
+.positionInfo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .positionSymbol {
   font-weight: 600;
   font-size: 16px;
+  color: #ffffff;
 }
 
 .positionType {
   padding: 4px 8px;
   border-radius: 4px;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 .positionType.long {
-  background: #00ff8820;
-  color: #00ff88;
-  border: 1px solid #00ff88;
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+  border: 1px solid #10b981;
 }
 
 .positionType.short {
-  background: #ff444420;
-  color: #ff4444;
-  border: 1px solid #ff4444;
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border: 1px solid #ef4444;
 }
 
-.closeButton {
-  background: none;
-  border: none;
-  color: #888;
-  font-size: 20px;
+.closePositionButton {
+  background: #374151;
+  border: 1px solid #4b5563;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 6px;
   cursor: pointer;
-  padding: 0;
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
+  font-family: var(--font-inter);
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
 }
 
-.closeButton:hover {
-  background: #ff444420;
-  color: #ff4444;
+.closePositionButton:hover {
+  background: #ef4444;
+  border-color: #dc2626;
+  transform: translateY(-1px);
 }
 
 .positionDetails {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 8px;
+  font-family: var(--font-mono);
   font-size: 14px;
+  letter-spacing: -0.01em;
 }
 
 .positionDetails > div {
@@ -513,45 +590,67 @@
   }
 }
 
-/* Mobile Landscape & Small Tablet (600px - 768px) */
+/* Responsive Design */
+@media (max-width: 1200px) {
+  .mainContent {
+    grid-template-columns: 1fr 350px;
+  }
+}
+
 @media (max-width: 768px) {
   .tradingPlatform {
-    height: 100dvh; /* Use dynamic viewport height for mobile */
+    height: 100dvh;
   }
 
   .header {
-    height: auto;
-    min-height: 60px;
-    padding: 8px 12px;
-  }
-
-  .logo {
-    flex-direction: row;
-    align-items: center;
-    gap: 16px;
+    height: 56px;
+    padding: 0 16px;
   }
 
   .logo h1 {
-    font-size: 20px;
+    font-size: 24px;
   }
 
-  .connectionStatus {
-    font-size: 10px;
+  .priceTicker {
+    display: none;
   }
 
   .mainContent {
+    display: flex;
     flex-direction: column;
-    height: calc(100dvh - 80px); /* Adjust for header */
+    gap: 1px;
   }
 
   .chartPanel {
     height: 50vh;
-    border-right: none;
-    border-bottom: 1px solid #2a2a2a;
+  }
+
+  .tradingPanel {
+    height: 50vh;
   }
 
   .chartHeader {
-    padding: 12px;
+    padding: 16px;
+  }
+
+  .chartContainer {
+    padding: 16px;
+  }
+
+  .orderFormHeader {
+    padding: 16px 20px;
+  }
+
+  .orderFormContent {
+    padding: 20px;
+  }
+
+  .orderFormContent.collapsed {
+    padding: 0 20px;
+  }
+
+  .positionsPanel {
+    padding: 20px;
   }
 
   .chartHeader h2 {
@@ -570,7 +669,8 @@
   .tradingPanel {
     width: 100%;
     height: 50vh;
-    border-left: none;
+    border: 1px solid #2a2a2a;
+    border-radius: 8px;
     overflow-y: auto;
   }
 
@@ -675,6 +775,8 @@
 
   .mainContent {
     height: calc(100dvh - 120px); /* Adjust for larger header */
+    padding: 8px;
+    gap: 8px;
   }
 
   .chartPanel {
@@ -708,8 +810,20 @@
   }
 
   .positionHeader {
-    flex-wrap: wrap;
-    gap: 8px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .positionInfo {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .closePositionButton {
+    width: 100%;
+    padding: 10px;
+    font-size: 13px;
   }
 
   .currentPrice {
@@ -928,48 +1042,53 @@
 }
 
 /* Scrollbar Styling */
+.tradingPanel::-webkit-scrollbar,
 .positionsPanel::-webkit-scrollbar {
   width: 6px;
 }
 
+.tradingPanel::-webkit-scrollbar-track,
 .positionsPanel::-webkit-scrollbar-track {
-  background: #1a1a1a;
+  background: #151b23;
 }
 
+.tradingPanel::-webkit-scrollbar-thumb,
 .positionsPanel::-webkit-scrollbar-thumb {
-  background: #3a3a3a;
+  background: #374151;
   border-radius: 3px;
 }
 
+.tradingPanel::-webkit-scrollbar-thumb:hover,
 .positionsPanel::-webkit-scrollbar-thumb:hover {
-  background: #4a4a4a;
+  background: #4b5563;
 }
 
 /* User Authentication Styles */
 .userSection {
   display: flex;
   align-items: center;
-  gap: 15px;
+  gap: 16px;
 }
 
 .userInfo {
   display: flex;
   align-items: center;
-  gap: 15px;
-  padding: 8px 12px;
-  background: #2a2a2a;
-  border-radius: 6px;
-  border: 1px solid #3a3a3a;
+  gap: 16px;
+  padding: 8px 16px;
+  background: #1f2733;
+  border-radius: 8px;
+  border: 1px solid #252d38;
 }
 
 .username {
-  color: #ffffff;
-  font-size: 14px;
+  color: #9ca3af;
+  font-size: 13px;
   font-weight: 500;
 }
 
 .balance {
-  color: #00ff88;
+  color: #10b981;
+  font-family: var(--font-mono);
   font-size: 14px;
   font-weight: 600;
 }

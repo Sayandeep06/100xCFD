@@ -3,7 +3,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createChart, ColorType, CrosshairMode, CandlestickSeries, HistogramSeries } from 'lightweight-charts';
 import { useActualBackend } from './hooks/useActualBackend';
-import { AuthModal } from './components/AuthModal';
 import styles from './page.module.css';
 
 // Types for our data structures
@@ -62,8 +61,12 @@ export default function TradingPlatform() {
   const [positions, setPositions] = useState<Position[]>([]);
   const [marginAmount, setMarginAmount] = useState<number>(100);
   const [leverage, setLeverage] = useState<number>(1);
-  const [user, setUser] = useState<User | null>(null);
-  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [user, setUser] = useState<User>({
+    userId: 1,
+    username: "Sayandeep",
+    balance: 20000
+  });
+  const [isOrderFormCollapsed, setIsOrderFormCollapsed] = useState(false);
   // Always use real backend with selected timeframe
   const { priceData, candleData, isConnected, error, placeTrade } = useActualBackend(selectedTimeframe);
 
@@ -72,38 +75,53 @@ export default function TradingPlatform() {
     if (!chartContainerRef.current) return;
 
     const chart = createChart(chartContainerRef.current, {
+      width: chartContainerRef.current.clientWidth,
+      height: chartContainerRef.current.clientHeight,
       layout: {
-        background: { type: ColorType.Solid, color: '#1a1a1a' },
+        background: { type: ColorType.Solid, color: '#151b23' },
         textColor: '#ffffff',
       },
       grid: {
-        vertLines: { color: '#2a2a2a' },
-        horzLines: { color: '#2a2a2a' },
+        vertLines: { color: '#252d38' },
+        horzLines: { color: '#252d38' },
       },
       crosshair: {
         mode: CrosshairMode.Normal,
       },
       rightPriceScale: {
-        borderColor: '#2a2a2a',
+        borderColor: '#252d38',
+        scaleMargins: {
+          top: 0.1,
+          bottom: 0.1,
+        },
       },
       timeScale: {
-        borderColor: '#2a2a2a',
+        borderColor: '#252d38',
         timeVisible: true,
         secondsVisible: false,
+      },
+      handleScroll: {
+        mouseWheel: true,
+        pressedMouseMove: true,
+      },
+      handleScale: {
+        axisPressedMouseMove: true,
+        mouseWheel: true,
+        pinch: true,
       },
     });
 
     const candlestickSeries = chart.addSeries(CandlestickSeries, {
-      upColor: '#00ff88',
-      downColor: '#ff4444',
-      borderDownColor: '#ff4444',
-      borderUpColor: '#00ff88',
-      wickDownColor: '#ff4444',
-      wickUpColor: '#00ff88',
+      upColor: '#10b981',
+      downColor: '#ef4444',
+      borderDownColor: '#ef4444',
+      borderUpColor: '#10b981',
+      wickDownColor: '#ef4444',
+      wickUpColor: '#10b981',
     });
 
     const volumeSeries = chart.addSeries(HistogramSeries, {
-      color: '#26a69a',
+      color: '#6b7280',
       priceFormat: {
         type: 'volume',
       },
@@ -114,7 +132,20 @@ export default function TradingPlatform() {
     candlestickSeriesRef.current = candlestickSeries;
     volumeSeriesRef.current = volumeSeries;
 
+    // Handle chart resize
+    const resizeObserver = new ResizeObserver(entries => {
+      if (entries.length === 0 || entries[0].target !== chartContainerRef.current) return;
+      const { width, height } = entries[0].contentRect;
+      chart.applyOptions({ width, height });
+      setTimeout(() => {
+        chart.timeScale().fitContent();
+      }, 0);
+    });
+
+    resizeObserver.observe(chartContainerRef.current);
+
     return () => {
+      resizeObserver.disconnect();
       chart.remove();
     };
   }, []);
@@ -133,7 +164,7 @@ export default function TradingPlatform() {
       const formattedVolumeData = candleData.map(candle => ({
         time: Math.floor(new Date(candle.timestamp).getTime() / 1000),
         value: candle.volume,
-        color: candle.close >= candle.open ? '#00ff8840' : '#ff444440',
+        color: candle.close >= candle.open ? '#10b98140' : '#ef444440',
       }));
 
       candlestickSeriesRef.current.setData(formattedCandleData);
@@ -157,35 +188,42 @@ export default function TradingPlatform() {
     }
   };
 
-  // Load positions when user logs in
-  useEffect(() => {
-    if (user) {
-      fetchPositions();
-      // Refresh positions every 5 seconds
-      const interval = setInterval(fetchPositions, 5000);
-      return () => clearInterval(interval);
-    } else {
-      setPositions([]);
+  // Fetch user data from backend
+  const fetchUserData = async () => {
+    try {
+      const response = await fetch(`http://localhost:8080/api/v1/user/data/${user.userId}`);
+      const data = await response.json();
+
+      if (data.success) {
+        setUser(prev => ({
+          ...prev,
+          balance: data.user.balance
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error);
     }
-  }, [user]);
+  };
+
+  // Load positions and user data
+  useEffect(() => {
+    fetchPositions();
+    fetchUserData();
+    // Refresh positions every 5 seconds
+    const positionsInterval = setInterval(fetchPositions, 5000);
+    // Refresh user data every 10 seconds
+    const userDataInterval = setInterval(fetchUserData, 10000);
+    return () => {
+      clearInterval(positionsInterval);
+      clearInterval(userDataInterval);
+    };
+  }, []);
 
   // Trading functions
   const executeTrade = async (type: 'long' | 'short') => {
-    // Check if user is authenticated
-    if (!user) {
-      setShowAuthModal(true);
-      return;
-    }
-
     const currentPrice = priceData[selectedSymbol]?.price || 0;
     if (!currentPrice) {
       alert('Price data not available');
-      return;
-    }
-
-    // Check if user has sufficient balance
-    if (user.balance < marginAmount) {
-      alert(`Insufficient balance. Required: $${marginAmount.toFixed(2)}, Available: $${user.balance.toFixed(2)}`);
       return;
     }
 
@@ -213,10 +251,9 @@ export default function TradingPlatform() {
 
       if (result.success) {
         console.log('Trade placed successfully:', result.message);
-        // Update user balance
-        setUser(prev => prev ? { ...prev, balance: prev.balance - marginAmount } : null);
-        // Refresh positions
+        // Refresh positions and user data
         fetchPositions();
+        fetchUserData();
       } else {
         console.error('Trade failed:', result.message);
         alert(`Trade failed: ${result.message}`);
@@ -228,7 +265,6 @@ export default function TradingPlatform() {
   };
 
   const closePosition = async (positionId: string) => {
-    if (!user) return;
 
     try {
       const response = await fetch('http://localhost:8080/api/v1/trades/close', {
@@ -246,9 +282,9 @@ export default function TradingPlatform() {
 
       if (result.success) {
         console.log('Position closed successfully');
-        // Refresh positions and user balance
+        // Refresh positions and user data
         fetchPositions();
-        // TODO: Update user balance with the closed position PnL
+        fetchUserData();
       } else {
         console.error('Failed to close position:', result.message);
         alert(`Failed to close position: ${result.message}`);
@@ -259,60 +295,27 @@ export default function TradingPlatform() {
     }
   };
 
-  const handleLogin = (userData: User) => {
-    setUser(userData);
-    localStorage.setItem('tradingUser', JSON.stringify(userData));
-  };
-
-  // Load user from localStorage on mount
-  useEffect(() => {
-    const savedUser = localStorage.getItem('tradingUser');
-    if (savedUser) {
-      try {
-        setUser(JSON.parse(savedUser));
-      } catch (error) {
-        localStorage.removeItem('tradingUser');
-      }
-    }
-  }, []);
 
   return (
     <div className={styles.tradingPlatform}>
       {/* Header with price ticker */}
       <header className={styles.header}>
         <div className={styles.logo}>
-          <h1>TradingPlatform</h1>
-          <div className={styles.connectionStatus}>
-            <span className={`${styles.status} ${isConnected ? styles.connected : styles.disconnected}`}>
-              {isConnected ? '🟢 Connected' : '🔴 Disconnected'}
-            </span>
-            {error && <span className={styles.error}>⚠️ {error}</span>}
-          </div>
+          <h1>100xCFD</h1>
+        </div>
+
+        <div className={styles.connectionStatus}>
+          <span className={`${styles.status} ${isConnected ? styles.connected : styles.disconnected}`}>
+            {isConnected ? '● Connected' : '● Disconnected'}
+          </span>
+          {error && <span className={styles.error}>⚠ {error}</span>}
         </div>
 
         <div className={styles.userSection}>
-          {user ? (
-            <div className={styles.userInfo}>
-              <span className={styles.username}>👤 {user.username}</span>
-              <span className={styles.balance}>💰 ${user.balance.toFixed(2)}</span>
-              <button
-                className={styles.logoutButton}
-                onClick={() => {
-                  setUser(null);
-                  localStorage.removeItem('tradingUser');
-                }}
-              >
-                Logout
-              </button>
-            </div>
-          ) : (
-            <button
-              className={styles.loginButton}
-              onClick={() => setShowAuthModal(true)}
-            >
-              Login / Sign Up
-            </button>
-          )}
+          <div className={styles.userInfo}>
+            <span className={styles.username}>{user.username}</span>
+            <span className={styles.balance}>${user.balance.toFixed(2)}</span>
+          </div>
         </div>
         <div className={styles.priceTicker}>
           {symbols.map(symbol => {
@@ -390,7 +393,16 @@ export default function TradingPlatform() {
         <div className={styles.tradingPanel}>
           {/* Order form */}
           <div className={styles.orderForm}>
-            <h3>Place Order</h3>
+            <div
+              className={styles.orderFormHeader}
+              onClick={() => setIsOrderFormCollapsed(!isOrderFormCollapsed)}
+            >
+              <h3>Place Order</h3>
+              <span className={`${styles.expandIcon} ${isOrderFormCollapsed ? styles.collapsed : ''}`}>
+                ▼
+              </span>
+            </div>
+            <div className={`${styles.orderFormContent} ${isOrderFormCollapsed ? styles.collapsed : ''}`}>
             <div className={styles.formGroup}>
               <label>Symbol</label>
               <select
@@ -463,6 +475,7 @@ export default function TradingPlatform() {
                 Short / Sell
               </button>
             </div>
+            </div>
           </div>
 
           {/* Positions */}
@@ -475,15 +488,17 @@ export default function TradingPlatform() {
                 {positions.map(position => (
                   <div key={position.positionId} className={styles.positionItem}>
                     <div className={styles.positionHeader}>
-                      <span className={styles.positionSymbol}>{position.symbol}</span>
-                      <span className={`${styles.positionType} ${position.side === 'long' ? styles.long : styles.short}`}>
-                        {position.side.toUpperCase()}
-                      </span>
+                      <div className={styles.positionInfo}>
+                        <span className={styles.positionSymbol}>{position.symbol}</span>
+                        <span className={`${styles.positionType} ${position.side === 'long' ? styles.long : styles.short}`}>
+                          {position.side.toUpperCase()}
+                        </span>
+                      </div>
                       <button
-                        className={styles.closeButton}
+                        className={styles.closePositionButton}
                         onClick={() => closePosition(position.positionId)}
                       >
-                        ×
+                        Close Position
                       </button>
                     </div>
                     <div className={styles.positionDetails}>
@@ -504,12 +519,6 @@ export default function TradingPlatform() {
         </div>
       </div>
 
-      {/* Authentication Modal */}
-      <AuthModal
-        isOpen={showAuthModal}
-        onClose={() => setShowAuthModal(false)}
-        onLogin={handleLogin}
-      />
     </div>
   );
 }

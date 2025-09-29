@@ -1,14 +1,77 @@
 import express, { Router } from 'express'
 import { RedisManager } from '../RedisManager';
+import { TradingEngine } from 'engine';
 export const tradesRouter: Router = express.Router()
+
+tradesRouter.get('/positions/:userId', async (req, res) => {
+    try {
+        const { userId } = req.params;
+        console.log('Fetching positions for userId:', userId);
+
+        if (!userId) {
+            return res.status(400).json({
+                message: "User ID is required"
+            });
+        }
+
+        const tradingEngine = TradingEngine.getInstance();
+        const positions = tradingEngine.getUserPositions(parseInt(userId));
+        console.log('Found positions:', positions);
+
+        res.status(200).json({
+            success: true,
+            positions: positions
+        });
+
+    } catch (error) {
+        console.error('Error fetching positions:', error);
+        res.status(500).json({
+            message: "Error fetching positions"
+        });
+    }
+});
+
+tradesRouter.post('/close', async (req, res) => {
+    try {
+        const { userId, positionId } = req.body;
+
+        if (!userId || !positionId) {
+            return res.status(400).json({
+                message: "Missing required fields: userId, positionId"
+            });
+        }
+
+        const tradingEngine = TradingEngine.getInstance();
+        const closedPosition = tradingEngine.closePosition(positionId, parseInt(userId));
+
+        if (closedPosition) {
+            res.status(200).json({
+                success: true,
+                message: "Position closed successfully",
+                position: closedPosition
+            });
+        } else {
+            res.status(400).json({
+                success: false,
+                message: "Failed to close position"
+            });
+        }
+
+    } catch (error) {
+        console.error('Error closing position:', error);
+        res.status(500).json({
+            message: "Error closing position"
+        });
+    }
+});
 
 tradesRouter.post('/trade', async (req, res) => {
     try {
-        const { asset, type, margin, leverage} = req.body;
+        const { userId, asset, type, margin, leverage} = req.body;
 
-        if (!asset || !type || !margin || !leverage) {
+        if (!userId || !asset || !type || !margin || !leverage) {
             return res.status(400).json({
-                message: "Missing required fields: asset, type, margin, leverage"
+                message: "Missing required fields: userId, asset, type, margin, leverage"
             });
         }
 
@@ -17,11 +80,11 @@ tradesRouter.post('/trade', async (req, res) => {
                 message: "Type must be 'buy' or 'sell'"
             });
         }
-        
+
         const orderMessage = {
             action: 'place_order',
             data: {
-                userId: 1, 
+                userId: parseInt(userId),
                 symbol: asset.toUpperCase(),
                 side: type,
                 margin: parseFloat(margin),

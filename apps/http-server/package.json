@@ -19,6 +19,7 @@
     "@types/nodemailer": "^7.0.1",
     "cors": "^2.8.5",
     "crypto": "^1.0.1",
+    "engine": "workspace:*",
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
     "nodemailer": "^7.0.6",

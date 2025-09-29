@@ -149,8 +149,14 @@ class CandleWebSocketServer {
                 case '5m':
                     candles = await CandleService.get5MinCandles(symbol, from, to);
                     break;
+                case '15m':
+                    candles = await CandleService.get15MinCandles(symbol, from, to);
+                    break;
                 case '1h':
                     candles = await CandleService.get1HrCandles(symbol, from, to);
+                    break;
+                case '4h':
+                    candles = await CandleService.get4HrCandles(symbol, from, to);
                     break;
                 case '1d':
                     candles = await CandleService.get1DayCandles(symbol, from, to);
@@ -187,6 +193,8 @@ class CandleWebSocketServer {
 
                 let candles: Candle[] = [];
 
+                console.log(`Fetching ${interval} candles for ${symbol} from ${from.toISOString()} to ${now.toISOString()}`);
+
                 switch (interval) {
                     case '1m':
                         candles = await CandleService.get1MinCandles(symbol, from, now);
@@ -194,13 +202,21 @@ class CandleWebSocketServer {
                     case '5m':
                         candles = await CandleService.get5MinCandles(symbol, from, now);
                         break;
+                    case '15m':
+                        candles = await CandleService.get15MinCandles(symbol, from, now);
+                        break;
                     case '1h':
                         candles = await CandleService.get1HrCandles(symbol, from, now);
+                        break;
+                    case '4h':
+                        candles = await CandleService.get4HrCandles(symbol, from, now);
                         break;
                     case '1d':
                         candles = await CandleService.get1DayCandles(symbol, from, now);
                         break;
                 }
+
+                console.log(`Found ${candles.length} candles for ${subscriptionKey}`);
 
 
                 const newCandles = candles.filter(candle => {
