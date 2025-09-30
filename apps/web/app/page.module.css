@@ -1139,6 +1139,194 @@
   border-color: #6b7280;
 }
 
+/* Toast Notifications */
+.toastContainer {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 400px;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid;
+  background: #1f2937;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  animation: slideIn 0.3s ease-out;
+}
+
+.toast:hover {
+  transform: translateX(-4px);
+}
+
+.toastSuccess {
+  border-color: #10b981;
+  background: linear-gradient(135deg, #1f2937 0%, #064e3b 100%);
+}
+
+.toastError {
+  border-color: #ef4444;
+  background: linear-gradient(135deg, #1f2937 0%, #7f1d1d 100%);
+}
+
+.toastWarning {
+  border-color: #f59e0b;
+  background: linear-gradient(135deg, #1f2937 0%, #78350f 100%);
+}
+
+.toastInfo {
+  border-color: #3b82f6;
+  background: linear-gradient(135deg, #1f2937 0%, #1e3a8a 100%);
+}
+
+.toastIcon {
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.toastMessage {
+  flex: 1;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.toastClose {
+  background: none;
+  border: none;
+  color: #9ca3af;
+  font-size: 18px;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.toastClose:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+/* Login Form */
+.loginContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0a0e16 0%, #151b23 100%);
+}
+
+.loginForm {
+  background: #1f2937;
+  border: 1px solid #374151;
+  border-radius: 12px;
+  padding: 40px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+}
+
+.loginForm h1 {
+  text-align: center;
+  margin-bottom: 32px;
+  color: #ffffff;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.loginForm input {
+  width: 100%;
+  padding: 12px 16px;
+  margin-bottom: 16px;
+  background: #374151;
+  border: 1px solid #4b5563;
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.loginForm input:focus {
+  outline: none;
+  border-color: #10b981;
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+}
+
+.loginForm input::placeholder {
+  color: #9ca3af;
+}
+
+.loginForm button {
+  width: 100%;
+  padding: 12px 16px;
+  background: #10b981;
+  border: none;
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: 16px;
+}
+
+.loginForm button:hover {
+  background: #059669;
+  transform: translateY(-1px);
+}
+
+.loginHint {
+  text-align: center;
+  color: #9ca3af;
+  font-size: 12px;
+  margin: 0;
+}
+
+.loginToggle {
+  text-align: center;
+  color: #9ca3af;
+  font-size: 13px;
+  margin: 16px 0 0 0;
+}
+
+.loginToggle span {
+  color: #10b981;
+  cursor: pointer;
+  text-decoration: underline;
+  transition: color 0.2s ease;
+}
+
+.loginToggle span:hover {
+  color: #059669;
+}
+
 .loginButton,
 .logoutButton {
   background: #0066cc;

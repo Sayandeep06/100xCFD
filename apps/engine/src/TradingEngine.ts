@@ -12,14 +12,12 @@ export class TradingEngine{
 
     private constructor(){
         this.config = {
-            max_leverage: 999999, // Essentially unlimited for testing
-            max_position_size: 100000000,
+            max_leverage: 500, 
+            max_position_size: 1000000,
             max_positions_per_user: 10
         }
         this.startPricePolling();
         this.loadInitialData();
-
-        // Artificial price drop removed - testing with extreme leverage instead
     }
     public static getInstance(){
         if(!this.instance){
@@ -61,10 +59,9 @@ export class TradingEngine{
     ){
         const user = this.users.get(userId)
         if(!user)   throw new Error("User not found")
-        // Max leverage validation removed for testing
-        // if(leverage > this.config.max_leverage){
-        //     throw new Error(`Max leverage is ${this.config.max_leverage}x`)
-        // }
+        if(leverage > this.config.max_leverage){
+            throw new Error(`Max leverage is ${this.config.max_leverage}x`)
+        }
         if (user.balances.usd.available < margin) {
             throw new Error(`Insufficient balance. Available: $${user.balances.usd.available}, Required: $${margin}`);
         }
@@ -122,8 +119,6 @@ export class TradingEngine{
                             timestamp: new Date()
                         });
 
-                        console.log(`Updated ${symbol}: price=${midPrice} (from bid=${bidPrice}, ask=${askPrice})`);
-
                         this.updatePositionPrices(symbol, midPrice);
                     } else {
                         console.warn(`Invalid price data for ${symbol}: bid=${bidPrice}, ask=${askPrice}. Using existing prices for position updates.`);
@@ -166,7 +161,6 @@ export class TradingEngine{
                 position.margin_ratio = (position.margin + position.unrealized_pnl) / position.margin;
 
                 if (position.margin_ratio <= 0.01) {
-                    console.log(`Liquidating ${position.positionId}: Price=${currentPrice}, Liquidation=${position.liquidation_price.toFixed(2)}, Margin Ratio=${(position.margin_ratio * 100).toFixed(1)}%`);
                     this.liquidatePosition(position.positionId, 'margin_call');
                 }
             }
@@ -291,6 +285,10 @@ export class TradingEngine{
         return this.users.get(userId);
     }
 
+    getAllUsers(): Map<number, User> {
+        return this.users;
+    }
+
     getUserPositions(userId: number): Position[] {
         return Array.from(this.positions.values())
             .filter(pos => pos.userId === userId);
@@ -306,16 +304,5 @@ export class TradingEngine{
 
     getLiquidations(): LiquidationEvent[] {
         return this.liquidations;
-    }
-
-    // Test method to manually update price for liquidation testing
-    testPriceUpdate(symbol: string, newPrice: number): void {
-        console.log(`TEST: Manually updating ${symbol} price to ${newPrice}`);
-        this.prices.set(symbol, {
-            symbol,
-            price: newPrice,
-            timestamp: new Date()
-        });
-        this.updatePositionPrices(symbol, newPrice);
     }
 }

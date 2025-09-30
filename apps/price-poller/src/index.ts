@@ -18,7 +18,6 @@ export class Poller{
     }
     public start(){
         if(this.ws){
-            console.log("Connection exists")
         }
         this.ws = new WebSocket(wsUrl)
         this.connect()
@@ -27,13 +26,11 @@ export class Poller{
         if(!this.ws)    return 
 
         this.ws.on('open', () => {
-            console.log("Connection established")
         })
 
         this.ws.on('message',(message)=>{
             try{
                 const data: binanceData = JSON.parse(message.toString())
-                console.log(`Received from Binance: ${data.s} price=${data.p} qty=${data.q}`)
 
                 const tradeData: TradeData  = {
                     symbol: data.s,
@@ -42,10 +39,8 @@ export class Poller{
                     trade_time: new Date(data.T),
                 }
 
-                console.log(`Sending to Redis toDB:`, tradeData)
                 RedisManager.getInstance().sendToDB(tradeData)
 
-                console.log(`Sending price to Redis priceToFE: ${data.p}`)
                 RedisManager.getInstance().sendPrice(data.p)
             }catch(error){
                 console.log('Error processing Binance message:', error)
@@ -53,7 +48,6 @@ export class Poller{
         })
 
         this.ws.on('error', (error)=>{
-            console.log(error)
         })
     }
     public close = () => {

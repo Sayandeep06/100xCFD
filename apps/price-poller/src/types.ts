@@ -1,14 +1,14 @@
 export type binanceData = {
-  "e": string  // Event type
-  "E": number   // Event time
-  "s": string // Symbol
-  "a": number	// Aggregate trade ID
-  "p": string     // Price
-  "q": string       // Quantity
-  "f": number         // First trade ID
-  "l": number         // Last trade ID
-  "T": number   // Trade time
-  "m": boolean     // Is the buyer the market maker?
+  "e": string  
+  "E": number   
+  "s": string 
+  "a": number	
+  "p": string     
+  "q": string       
+  "f": number         
+  "l": number         
+  "T": number   
+  "m": boolean     
 }
 
 export interface TradeData {

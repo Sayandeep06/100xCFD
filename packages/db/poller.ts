@@ -26,7 +26,6 @@ export class RedisManager {
   }
 
   public async pricePoller() {
-    console.log('Starting price poller - storing trades only...')
 
     while (true) {
       try {
@@ -43,7 +42,6 @@ export class RedisManager {
             }
           })
 
-          console.log(`Stored trade: ${trade.symbol} $${trade.price} qty:${trade.quantity}`)
         } else {
           continue
         }

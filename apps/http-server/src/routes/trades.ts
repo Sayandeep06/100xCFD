@@ -6,7 +6,6 @@ export const tradesRouter: Router = express.Router()
 tradesRouter.get('/positions/:userId', async (req, res) => {
     try {
         const { userId } = req.params;
-        console.log('Fetching positions for userId:', userId);
 
         if (!userId) {
             return res.status(400).json({
@@ -16,7 +15,6 @@ tradesRouter.get('/positions/:userId', async (req, res) => {
 
         const tradingEngine = TradingEngine.getInstance();
         const positions = tradingEngine.getUserPositions(parseInt(userId));
-        console.log('Found positions:', positions);
 
         res.status(200).json({
             success: true,
@@ -94,53 +92,28 @@ tradesRouter.post('/trade', async (req, res) => {
 
         const redisClient = RedisManager.getInstance();
         const response = await redisClient.publishAndSubscribe(JSON.stringify(orderMessage));
-        
+
         if (response.success) {
             res.status(200).json({
                 success: true,
                 positionId: response.data.positionId,
-                orderId: response.data.positionId, // For backward compatibility
+                orderId: response.data.positionId, 
                 message: `${type.toUpperCase()} order placed successfully`
             });
         } else {
+            console.error('HTTP Server: Order placement failed:', response.error);
             res.status(400).json({
                 success: false,
                 message: response.error || "Failed to place order"
             });
         }
-        
-    } catch (error) {
-        console.error('Error placing order:', error);
-        res.status(411).json({
-            message: "Error processing order"
-        });
-    }
-});
-
-// Test endpoint for liquidation testing
-tradesRouter.post('/test-price-update', async (req, res) => {
-    try {
-        const { symbol, price } = req.body;
-
-        if (!symbol || !price) {
-            return res.status(400).json({
-                message: "Missing required fields: symbol, price"
-            });
-        }
-
-        const tradingEngine = TradingEngine.getInstance();
-        tradingEngine.testPriceUpdate(symbol, parseFloat(price));
-
-        res.status(200).json({
-            success: true,
-            message: `Price updated to ${price} for ${symbol}`,
-            newPrice: parseFloat(price)
-        });
 
     } catch (error) {
-        console.error('Error updating test price:', error);
+        console.error('HTTP Server: Error placing order:', error);
+        const errorMessage = error instanceof Error ? error.message : "Error processing order";
         res.status(500).json({
-            message: "Error updating test price"
+            success: false,
+            message: errorMessage
         });
     }
 });

@@ -19,7 +19,6 @@ interface CandleData {
   volume: number;
 }
 
-// Mock price data for demonstration
 const initialPrices: Record<string, PriceData> = {
   'BTCUSDT': {
     symbol: 'BTCUSDT',
@@ -73,14 +72,13 @@ export const useMockPriceData = () => {
   const [candleData, setCandleData] = useState<CandleData[]>([]);
 
   useEffect(() => {
-    // Generate initial candle data
     const generateCandleData = (basePrice: number, count: number): CandleData[] => {
       const candles: CandleData[] = [];
       let currentPrice = basePrice;
       const now = Date.now();
 
       for (let i = count; i >= 0; i--) {
-        const volatility = 0.02; // 2% volatility
+        const volatility = 0.02; 
         const change = (Math.random() - 0.5) * currentPrice * volatility;
 
         const open = currentPrice;
@@ -89,7 +87,7 @@ export const useMockPriceData = () => {
         const low = Math.min(open, close) - Math.random() * currentPrice * 0.01;
 
         candles.push({
-          time: now - (i * 60000), // 1 minute intervals
+          time: now - (i * 60000), 
           open,
           high,
           low,
@@ -105,7 +103,6 @@ export const useMockPriceData = () => {
 
     setCandleData(generateCandleData(42350, 100));
 
-    // Simulate real-time price updates
     const priceUpdateInterval = setInterval(() => {
       setPriceData(prev => {
         const updated = { ...prev };
@@ -114,7 +111,7 @@ export const useMockPriceData = () => {
           const current = updated[symbol];
           if (!current) return;
 
-          const volatility = 0.001; // 0.1% volatility per update
+          const volatility = 0.001; 
           const change = (Math.random() - 0.5) * current.price * volatility;
           const newPrice = current.price + change;
           const priceChange = newPrice - current.price;
@@ -133,9 +130,8 @@ export const useMockPriceData = () => {
 
         return updated;
       });
-    }, 1000); // Update every second
+    }, 1000); 
 
-    // Simulate real-time candle updates
     const candleUpdateInterval = setInterval(() => {
       setCandleData(prev => {
         if (prev.length === 0) return prev;
@@ -143,15 +139,13 @@ export const useMockPriceData = () => {
         const lastCandle = prev[prev.length - 1];
         if (!lastCandle) return prev;
 
-        const volatility = 0.005; // 0.5% volatility
+        const volatility = 0.005; 
         const change = (Math.random() - 0.5) * lastCandle.close * volatility;
         const newPrice = lastCandle.close + change;
 
-        // Update the last candle or create a new one
         const timeDiff = Date.now() - lastCandle.time;
 
         if (timeDiff < 60000) {
-          // Update current candle
           const updatedCandles = [...prev];
           const currentCandle = updatedCandles[updatedCandles.length - 1];
           if (!currentCandle) return prev;
@@ -166,7 +160,6 @@ export const useMockPriceData = () => {
           };
           return updatedCandles;
         } else {
-          // Create new candle
           const newCandle: CandleData = {
             time: Date.now(),
             open: lastCandle.close,
@@ -176,12 +169,11 @@ export const useMockPriceData = () => {
             volume: Math.random() * 100 + 50,
           };
 
-          // Keep only last 100 candles
           const updatedCandles = [...prev.slice(-99), newCandle];
           return updatedCandles;
         }
       });
-    }, 2000); // Update every 2 seconds
+    }, 2000); 
 
     return () => {
       clearInterval(priceUpdateInterval);

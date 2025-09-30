@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors'
+import 'engine'; 
 import { userRouter } from './routes/user';
 import { tradesRouter } from './routes/trades';
 import { assetsRouter } from './routes/assets';
@@ -15,8 +16,7 @@ app.use(express.json())
 app.use('/api/v1/trades', tradesRouter);
 app.use('/api/v1/user', userRouter);
 app.use('/api/v1/assets', assetsRouter)
-app.use('/api/v1/prices', assetsRouter) // Alias for price endpoints
+app.use('/api/v1/prices', assetsRouter) 
 
 app.listen(8080, ()=>{
-    console.log(`API Server: http://localhost:8080`)
 })

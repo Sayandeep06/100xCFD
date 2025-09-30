@@ -1,33 +1,43 @@
 import express, { Router } from 'express'
 import { TradingEngine } from 'engine';
+import { RedisManager } from '../RedisManager';
 export const userRouter: Router = express.Router()
 
 userRouter.post('/signup', async (req, res) => {
     try {
-        const { email, username, password } = req.body;
+        const { username, password } = req.body;
 
-        if (!email || !username || !password) {
+        if (!username || !password) {
             return res.status(400).json({
-                message: "Email, username, and password are required"
+                message: "Username and password are required"
             });
         }
 
-        const existingUser = TradingEngine.getInstance().findUserByUsername(username);
-        if (existingUser) {
-            return res.status(400).json({
+        const userMessage = {
+            action: 'create_user',
+            data: {
+                email: '', 
+                username,
+                password,
+                startingBalance: 10000
+            }
+        };
+
+        const redisClient = RedisManager.getInstance();
+        const response = await redisClient.publishAndSubscribe(JSON.stringify(userMessage));
+
+        if (response.success) {
+            res.status(200).json({
+                success: true,
+                userId: response.data.userId,
+                message: "User created successfully"
+            });
+        } else {
+            res.status(400).json({
                 success: false,
-                message: "Username already exists"
+                message: response.error || "Failed to create user"
             });
         }
-
-        const userId = Date.now();
-
-        const user = TradingEngine.getInstance().createUser(userId, username, password, 10000);
-        res.status(200).json({
-            success: true,
-            userId: user.userId,
-            message: "User created successfully"
-        });
 
     } catch (error) {
         console.error('Error in signup:', error);

@@ -14,7 +14,6 @@ export class CandleService {
     private static instance: CandleService
     private static getClosestTime(timestamp: Date, interval: number): Date {
         const time = Math.floor(timestamp.getTime() / interval) * interval;
-        //timestamp.getTime() gives a numeric representation to the date
         return new Date(time);
     }
     static async getCandles(symbol: string, startTime: Date, endTime: Date): Promise<Candle | null> {
@@ -29,12 +28,20 @@ export class CandleService {
             orderBy: {trade_time: 'asc'}
         })
         if(trades.length == 0)      return null;
+
+        let high = trades[0].price;
+        let low = trades[0].price;
+        for (const trade of trades) {
+            if (trade.price > high) high = trade.price;
+            if (trade.price < low) low = trade.price;
+        }
+
         return{
             symbol: symbol,
             timestamp: startTime,
             open: trades[0].price,
-            high: Math.max(...trades.map(t => t.price)),
-            low: Math.min(...trades.map(t=>t.price)),
+            high: high,
+            low: low,
             close: trades[trades.length-1].price,
             volume: trades.reduce((acc, t) => acc + t.price,0)
         }
@@ -118,16 +125,27 @@ export class CandleService {
         let current = this.getClosestTime(from, interval)
         const end = this.getClosestTime(to, interval)
 
+        const batchSize = 10;
+        const times: Date[] = [];
+
         while(current <= end){
-            const candleEnd = new Date(current.getTime() + interval)
-            const candle = await this.getCandles(symbol, current, candleEnd)
+            times.push(new Date(current));
+            current = new Date(current.getTime() + interval);
+        }
 
-            if(candle){
-                candles.push(candle)
+        for(let i = 0; i < times.length; i += batchSize) {
+            const batch = times.slice(i, i + batchSize);
+            const promises = batch.map(time =>
+                this.getCandles(symbol, time, new Date(time.getTime() + interval))
+            );
+            const results = await Promise.all(promises);
+
+            for(const candle of results) {
+                if(candle) candles.push(candle);
             }
+        }
 
-            current = new Date(current.getTime() + interval)
-        }return candles
+        return candles;
     }
     static async get1DayCandles(symbol:string, from: Date, to: Date): Promise<Candle[]> {
         const candles: Candle[] = []
@@ -136,16 +154,27 @@ export class CandleService {
         let current = this.getClosestTime(from, interval)
         const end = this.getClosestTime(to, interval)
 
+        const batchSize = 10;
+        const times: Date[] = [];
+
         while(current <= end){
-            const candleEnd = new Date(current.getTime() + interval)
-            const candle = await this.getCandles(symbol, current, candleEnd)
+            times.push(new Date(current));
+            current = new Date(current.getTime() + interval);
+        }
 
-            if(candle){
-                candles.push(candle)
+        for(let i = 0; i < times.length; i += batchSize) {
+            const batch = times.slice(i, i + batchSize);
+            const promises = batch.map(time =>
+                this.getCandles(symbol, time, new Date(time.getTime() + interval))
+            );
+            const results = await Promise.all(promises);
+
+            for(const candle of results) {
+                if(candle) candles.push(candle);
             }
+        }
 
-            current = new Date(current.getTime() + interval)
-        }return candles
+        return candles;
     }
     static async getLatestPrice(symbol: string): Promise<number | null>{
         const price = await prisma.trade.findFirst({

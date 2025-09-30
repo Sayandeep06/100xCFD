@@ -3,7 +3,6 @@ import { RedisManager } from '../RedisManager';
 
 export const assetsRouter: Router = express.Router()
 
-// Get latest price from Redis
 assetsRouter.get('/price/latest', async (req, res) => {
     try {
         const redisClient = RedisManager.getInstance();

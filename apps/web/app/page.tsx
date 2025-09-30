@@ -1,11 +1,17 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { createChart, ColorType, CrosshairMode, CandlestickSeries, HistogramSeries } from 'lightweight-charts';
 import { useActualBackend } from './hooks/useActualBackend';
 import styles from './page.module.css';
+import LoadingScreen from './components/LoadingScreen';
 
-// Types for our data structures
+interface Toast {
+  id: string;
+  message: string;
+  type: 'success' | 'error' | 'warning' | 'info';
+}
+
 interface PriceData {
   symbol: string;
   price: number;
@@ -52,27 +58,62 @@ export default function TradingPlatform() {
   const candlestickSeriesRef = useRef<any>(null);
   const volumeSeriesRef = useRef<any>(null);
 
-  // Only BTCUSDT is available in the actual backend
   const symbols = ['BTCUSDT'];
 
-  // State management
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [isSignupMode, setIsSignupMode] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const savedUser = localStorage.getItem('user');
+    if (savedUser) {
+      try {
+        const parsedUser = JSON.parse(savedUser);
+        setUser(parsedUser);
+        setIsAuthenticated(true);
+      } catch (error) {
+        console.error('Failed to parse saved user:', error);
+        localStorage.removeItem('user');
+      }
+    }
+    setIsLoading(false);
+  }, []);
+  const [loginForm, setLoginForm] = useState({ username: '', password: '' });
+  const [signupForm, setSignupForm] = useState({
+    username: '',
+    password: '',
+    confirmPassword: ''
+  });
+
+  const [toasts, setToasts] = useState<Toast[]>([]);
+
   const [selectedSymbol, setSelectedSymbol] = useState('BTCUSDT');
   const [selectedTimeframe, setSelectedTimeframe] = useState('1m');
   const [positions, setPositions] = useState<Position[]>([]);
   const [marginAmount, setMarginAmount] = useState<number>(100);
   const [leverage, setLeverage] = useState<number>(1);
-  const [user, setUser] = useState<User>({
-    userId: 1,
-    username: "Sayandeep",
-    balance: 20000
-  });
   const [isOrderFormCollapsed, setIsOrderFormCollapsed] = useState(false);
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
-  // Always use real backend with selected timeframe
+  const [isChartReady, setIsChartReady] = useState(false);
   const { priceData, candleData, isConnected, error, placeTrade } = useActualBackend(selectedTimeframe);
 
-  // Initialize chart
+  const showToast = (message: string, type: Toast['type'] = 'info') => {
+    const id = Math.random().toString(36).substr(2, 9);
+    const newToast: Toast = { id, message, type };
+    setToasts(prev => [...prev, newToast]);
+
+    setTimeout(() => {
+      setToasts(prev => prev.filter(toast => toast.id !== id));
+    }, 4000);
+  };
+
+  const removeToast = (id: string) => {
+    setToasts(prev => prev.filter(toast => toast.id !== id));
+  };
+
   useEffect(() => {
+    if (!isAuthenticated || !user) return;
     if (!chartContainerRef.current) return;
 
     const chart = createChart(chartContainerRef.current, {
@@ -132,8 +173,8 @@ export default function TradingPlatform() {
     chartRef.current = chart;
     candlestickSeriesRef.current = candlestickSeries;
     volumeSeriesRef.current = volumeSeries;
+    setIsChartReady(true);
 
-    // Handle chart resize
     const resizeObserver = new ResizeObserver(entries => {
       if (entries.length === 0 || entries[0].target !== chartContainerRef.current) return;
       const { width, height } = entries[0].contentRect;
@@ -148,14 +189,14 @@ export default function TradingPlatform() {
     return () => {
       resizeObserver.disconnect();
       chart.remove();
+      setIsChartReady(false);
     };
-  }, []);
+  }, [isAuthenticated, user?.userId]); 
 
-  // Update chart data when candleData changes
   useEffect(() => {
-    if (candlestickSeriesRef.current && volumeSeriesRef.current && candleData.length > 0) {
+    if (isChartReady && candlestickSeriesRef.current && volumeSeriesRef.current && candleData.length > 0) {
       const formattedCandleData = candleData.map(candle => ({
-        time: Math.floor(new Date(candle.timestamp).getTime() / 1000), // Real data: timestamp is Date
+        time: Math.floor(new Date(candle.timestamp).getTime() / 1000), 
         open: candle.open,
         high: candle.high,
         low: candle.low,
@@ -171,104 +212,88 @@ export default function TradingPlatform() {
       candlestickSeriesRef.current.setData(formattedCandleData);
       volumeSeriesRef.current.setData(formattedVolumeData);
     }
-  }, [candleData, selectedSymbol, selectedTimeframe]);
+  }, [candleData, selectedSymbol, selectedTimeframe, isChartReady]);
 
-  // Fetch positions from backend
-  const fetchPositions = async () => {
-    if (!user) return;
+  const fetchPositions = useCallback(async () => {
+    if (!user?.userId) return;
 
     try {
-      console.log('Fetching positions for user:', user.userId);
       const response = await fetch(`http://localhost:8080/api/v1/trades/positions/${user.userId}`);
       const data = await response.json();
-      console.log('Positions response:', data);
 
       if (data.success) {
-        console.log('Setting positions:', data.positions);
         setPositions(data.positions);
-      } else {
-        console.warn('Failed to fetch positions:', data.message);
       }
     } catch (error) {
       console.error('Error fetching positions:', error);
     }
-  };
+  }, [user?.userId]);
 
-  // Fetch user data from backend
-  const fetchUserData = async () => {
+  const fetchUserData = useCallback(async () => {
+    if (!user?.userId) return;
+
     try {
-      console.log('Fetching user data for user:', user.userId);
       const response = await fetch(`http://localhost:8080/api/v1/user/data/${user.userId}`);
       const data = await response.json();
-      console.log('User data response:', data);
 
       if (data.success) {
-        console.log('Updating user balance from', user.balance, 'to', data.user.balance);
         setUser(prev => ({
-          ...prev,
+          ...prev!,
           balance: data.user.balance
         }));
-      } else {
-        console.warn('Failed to fetch user data:', data.message);
+        const savedUser = localStorage.getItem('user');
+        if (savedUser) {
+          const parsed = JSON.parse(savedUser);
+          parsed.balance = data.user.balance;
+          localStorage.setItem('user', JSON.stringify(parsed));
+        }
       }
     } catch (error) {
       console.error('Error fetching user data:', error);
     }
-  };
+  }, [user?.userId]);
 
-  // Load positions and user data
   useEffect(() => {
+    if (!user?.userId) return;
+
     fetchPositions();
     fetchUserData();
-    // Refresh positions every 5 seconds
     const positionsInterval = setInterval(fetchPositions, 5000);
-    // Refresh user data every 10 seconds
     const userDataInterval = setInterval(fetchUserData, 10000);
     return () => {
       clearInterval(positionsInterval);
       clearInterval(userDataInterval);
     };
-  }, []);
+  }, [user?.userId, fetchPositions, fetchUserData]); 
 
-  // Trading functions
   const executeTrade = async (type: 'long' | 'short') => {
-    console.log('=== Order Placement Debug ===');
-    console.log('isPlacingOrder:', isPlacingOrder);
-    console.log('isConnected:', isConnected);
-    console.log('priceData:', priceData);
-    console.log('selectedSymbol:', selectedSymbol);
 
-    // Prevent multiple concurrent orders
     if (isPlacingOrder) {
-      console.log('Order already in progress, ignoring click');
+      return;
+    }
+
+    if (!user || !user.userId) {
+      console.error('User not authenticated or userId missing:', user);
+      showToast('Please login again to place orders', 'error');
+      setIsAuthenticated(false);
+      setUser(null);
       return;
     }
 
     const currentPrice = priceData[selectedSymbol]?.price || 0;
-    console.log('Current price for', selectedSymbol, ':', currentPrice);
 
-    // Simplified validation - just check if we have some price data
     if (!currentPrice || currentPrice <= 0) {
       console.warn('Price validation failed - price:', currentPrice);
-      alert('Price data not available. Current price: ' + currentPrice);
+      showToast(`Price data not available. Current price: ${currentPrice}`, 'warning');
       return;
     }
 
     setIsPlacingOrder(true);
 
-    // Calculate position size and quantity based on margin and leverage
     const positionSize = marginAmount * leverage;
     const quantity = positionSize / currentPrice;
 
-    // Send order to backend with authentication
     try {
-      console.log('Placing order:', {
-        userId: user.userId,
-        asset: selectedSymbol,
-        type: type === 'long' ? 'buy' : 'sell',
-        margin: marginAmount,
-        leverage: leverage
-      });
 
       const response = await fetch('http://localhost:8080/api/v1/trades/trade', {
         method: 'POST',
@@ -285,24 +310,46 @@ export default function TradingPlatform() {
       });
 
       const result = await response.json();
-      console.log('Order response:', result);
 
       if (result.success) {
-        console.log('Trade placed successfully:', result.message);
-        alert(`✅ Order placed successfully! ${result.message}`);
-        // Add delay to allow backend to process the order
-        setTimeout(() => {
-          console.log('Refreshing positions and user data...');
+
+        const positionId = result.positionId;
+        let positionConfirmed = false;
+        let attempts = 0;
+        const maxAttempts = 10; 
+
+        while (!positionConfirmed && attempts < maxAttempts) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+
+          const positionsResponse = await fetch(`http://localhost:8080/api/v1/trades/positions/${user.userId}`);
+          const positionsData = await positionsResponse.json();
+
+          if (positionsData.success) {
+            const position = positionsData.positions.find((p: Position) => p.positionId === positionId);
+            if (position) {
+              positionConfirmed = true;
+              showToast(`Order placed successfully! ${result.message}`, 'success');
+              fetchPositions();
+              fetchUserData();
+              break;
+            }
+          }
+          attempts++;
+        }
+
+        if (!positionConfirmed) {
+          console.warn('Position not confirmed after verification');
+          showToast('Order placed but position not confirmed yet. Refreshing...', 'warning');
           fetchPositions();
           fetchUserData();
-        }, 1000);
+        }
       } else {
         console.error('Trade failed:', result.message);
-        alert(`Trade failed: ${result.message}`);
+        showToast(`Trade failed: ${result.message}`, 'error');
       }
     } catch (error) {
       console.error('Error placing trade:', error);
-      alert('Failed to place trade. Please try again.');
+      showToast('Failed to place trade. Please try again.', 'error');
     } finally {
       setIsPlacingOrder(false);
     }
@@ -325,8 +372,6 @@ export default function TradingPlatform() {
       const result = await response.json();
 
       if (result.success) {
-        console.log('Position closed successfully');
-        // Refresh positions and user data
         fetchPositions();
         fetchUserData();
       } else {
@@ -339,10 +384,192 @@ export default function TradingPlatform() {
     }
   };
 
+  const handleSignup = async () => {
+    if (!signupForm.username || !signupForm.password || !signupForm.confirmPassword) {
+      showToast('Please fill in all fields', 'warning');
+      return;
+    }
+
+    if (signupForm.password !== signupForm.confirmPassword) {
+      showToast('Passwords do not match', 'error');
+      return;
+    }
+
+    if (signupForm.password.length < 4) {
+      showToast('Password must be at least 4 characters', 'warning');
+      return;
+    }
+
+    try {
+      const response = await fetch('http://localhost:8080/api/v1/user/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: signupForm.username,
+          password: signupForm.password
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        showToast('Account created successfully! Please login.', 'success');
+        setIsSignupMode(false);
+        setSignupForm({
+          username: '',
+          password: '',
+          confirmPassword: ''
+        });
+        setLoginForm({ username: signupForm.username, password: '' });
+      } else {
+        showToast(result.message || 'Failed to create account', 'error');
+      }
+    } catch (error) {
+      console.error('Signup error:', error);
+      showToast('Failed to create account. Please try again.', 'error');
+    }
+  };
+
+  const handleLogin = async () => {
+    if (!loginForm.username || !loginForm.password) {
+      showToast('Please enter username and password', 'warning');
+      return;
+    }
+
+    try {
+      const response = await fetch('http://localhost:8080/api/v1/user/signin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          username: loginForm.username,
+          password: loginForm.password
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        const userData = {
+          userId: result.user.userId,
+          username: result.user.username,
+          balance: result.user.balance
+        };
+        setUser(userData);
+        setIsAuthenticated(true);
+        localStorage.setItem('user', JSON.stringify(userData));
+        showToast('Login successful!', 'success');
+        setLoginForm({ username: '', password: '' });
+      } else {
+        showToast(result.message || 'Invalid credentials', 'error');
+      }
+    } catch (error) {
+      console.error('Login error:', error);
+      showToast('Failed to login. Please try again.', 'error');
+    }
+  };
+
+  const handleLogout = () => {
+    setIsAuthenticated(false);
+    setUser(null);
+    setPositions([]);
+    localStorage.removeItem('user');
+    showToast('Logged out successfully', 'info');
+  };
+
+  if (isLoading) {
+    return <LoadingScreen />;
+  }
+
+  if (!isAuthenticated || !user) {
+    return (
+      <div className={styles.tradingPlatform}>
+        <div className={styles.loginContainer}>
+          <div className={styles.loginForm}>
+            <h1>100xCFD {isSignupMode ? 'Sign Up' : 'Login'}</h1>
+
+            {isSignupMode ? (
+              <>
+                <input
+                  type="text"
+                  placeholder="Username"
+                  value={signupForm.username}
+                  onChange={(e) => setSignupForm(prev => ({ ...prev, username: e.target.value }))}
+                />
+                <input
+                  type="password"
+                  placeholder="Password"
+                  value={signupForm.password}
+                  onChange={(e) => setSignupForm(prev => ({ ...prev, password: e.target.value }))}
+                />
+                <input
+                  type="password"
+                  placeholder="Confirm Password"
+                  value={signupForm.confirmPassword}
+                  onChange={(e) => setSignupForm(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                  onKeyPress={(e) => e.key === 'Enter' && handleSignup()}
+                />
+                <button onClick={handleSignup}>Create Account</button>
+                <p className={styles.loginToggle}>
+                  Already have an account?{' '}
+                  <span onClick={() => setIsSignupMode(false)}>Login here</span>
+                </p>
+              </>
+            ) : (
+              <>
+                <input
+                  type="text"
+                  placeholder="Username"
+                  value={loginForm.username}
+                  onChange={(e) => setLoginForm(prev => ({ ...prev, username: e.target.value }))}
+                />
+                <input
+                  type="password"
+                  placeholder="Password"
+                  value={loginForm.password}
+                  onChange={(e) => setLoginForm(prev => ({ ...prev, password: e.target.value }))}
+                  onKeyPress={(e) => e.key === 'Enter' && handleLogin()}
+                />
+                <button onClick={handleLogin}>Login</button>
+                <p className={styles.loginToggle}>
+                  Don't have an account?{' '}
+                  <span onClick={() => setIsSignupMode(true)}>Sign up here</span>
+                </p>
+              </>
+            )}
+          </div>
+        </div>
+
+        <div className={styles.toastContainer}>
+          {toasts.map(toast => (
+            <div
+              key={toast.id}
+              className={`${styles.toast} ${styles[`toast${toast.type.charAt(0).toUpperCase() + toast.type.slice(1)}`]}`}
+              onClick={() => removeToast(toast.id)}
+            >
+              <span className={styles.toastIcon}>
+                {toast.type === 'success' && '✅'}
+                {toast.type === 'error' && '❌'}
+                {toast.type === 'warning' && '⚠️'}
+                {toast.type === 'info' && 'ℹ️'}
+              </span>
+              <span className={styles.toastMessage}>{toast.message}</span>
+              <button className={styles.toastClose} onClick={(e) => {
+                e.stopPropagation();
+                removeToast(toast.id);
+              }}>×</button>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.tradingPlatform}>
-      {/* Header with price ticker */}
       <header className={styles.header}>
         <div className={styles.logo}>
           <h1>100xCFD</h1>
@@ -386,14 +613,13 @@ export default function TradingPlatform() {
             <span className={styles.username}>{user.username}</span>
             <span className={styles.balance}>${user.balance.toFixed(2)}</span>
           </div>
-          <button className={styles.logoutButton}>
+          <button className={styles.logoutButton} onClick={handleLogout}>
             Logout
           </button>
         </div>
       </header>
 
       <div className={styles.mainContent}>
-        {/* Left panel - Chart */}
         <div className={styles.chartPanel}>
           <div className={styles.chartHeader}>
             <h2>{selectedSymbol}</h2>
@@ -439,9 +665,7 @@ export default function TradingPlatform() {
           <div ref={chartContainerRef} className={styles.chartContainer} />
         </div>
 
-        {/* Right panel - Trading */}
         <div className={styles.tradingPanel}>
-          {/* Order form */}
           <div className={styles.orderForm}>
             <div
               className={styles.orderFormHeader}
@@ -490,11 +714,9 @@ export default function TradingPlatform() {
                 <option value={50}>50x</option>
                 <option value={100}>100x</option>
                 <option value={200}>200x</option>
+                <option value={300}>300x</option>
+                <option value={400}>400x</option>
                 <option value={500}>500x</option>
-                <option value={1000}>1,000x</option>
-                <option value={5000}>5,000x</option>
-                <option value={10000}>10,000x</option>
-                <option value={50000}>50,000x</option>
               </select>
             </div>
 
@@ -536,7 +758,6 @@ export default function TradingPlatform() {
             </div>
           </div>
 
-          {/* Positions */}
           <div className={styles.positionsPanel}>
             <h3>Open Positions</h3>
             {positions.length === 0 ? (
@@ -575,6 +796,28 @@ export default function TradingPlatform() {
             )}
           </div>
         </div>
+      </div>
+
+      <div className={styles.toastContainer}>
+        {toasts.map(toast => (
+          <div
+            key={toast.id}
+            className={`${styles.toast} ${styles[`toast${toast.type.charAt(0).toUpperCase() + toast.type.slice(1)}`]}`}
+            onClick={() => removeToast(toast.id)}
+          >
+            <span className={styles.toastIcon}>
+              {toast.type === 'success' && '✅'}
+              {toast.type === 'error' && '❌'}
+              {toast.type === 'warning' && '⚠️'}
+              {toast.type === 'info' && 'ℹ️'}
+            </span>
+            <span className={styles.toastMessage}>{toast.message}</span>
+            <button className={styles.toastClose} onClick={(e) => {
+              e.stopPropagation();
+              removeToast(toast.id);
+            }}>×</button>
+          </div>
+        ))}
       </div>
 
     </div>

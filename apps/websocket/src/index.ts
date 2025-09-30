@@ -9,7 +9,7 @@ interface Client {
 interface SubscriptionMessage {
     action: 'subscribe' | 'unsubscribe';
     symbol: string;
-    interval: '1m' | '5m' | '1h' | '1d';
+    interval: '1m' | '5m' | '15m' | '1h' | '4h' | '1d';
     from?: Date;
     to?: Date;
 }
@@ -38,7 +38,6 @@ class CandleWebSocketServer {
     private constructor() {
         this.wss = new WebSocketServer({ port: this.port });
         this.setupWebSocketServer();
-        console.log(`WebSocket server started on ws://localhost:${this.port}`);
     }
 
     public static getInstance(): CandleWebSocketServer {
@@ -50,7 +49,6 @@ class CandleWebSocketServer {
 
     private setupWebSocketServer(): void {
         this.wss.on('connection', (ws: WebSocket) => {
-            console.log('New client connected');
 
             const client: Client = {
                 ws,
@@ -70,7 +68,6 @@ class CandleWebSocketServer {
             });
 
             ws.on('close', () => {
-                console.log('Client disconnected');
                 this.cleanupClient(ws);
             });
 
@@ -130,7 +127,6 @@ class CandleWebSocketServer {
         const subscribers = this.subscriptions.get(subscriptionKey);
         if (subscribers) {
             subscribers.delete(ws);
-            // If no more subscribers, stop the stream and cleanup
             if (subscribers.size === 0) {
                 this.stopCandleStream(subscriptionKey);
                 this.subscriptions.delete(subscriptionKey);
@@ -173,7 +169,8 @@ class CandleWebSocketServer {
                 ws.send(JSON.stringify(historicalMessage));
             }
         } catch (error) {
-            console.error(`Error fetching historical candles:`, error);
+            console.error(`Error fetching historical ${interval} candles for ${symbol}:`, error);
+            console.error('Stack:', error instanceof Error ? error.stack : 'No stack trace');
             this.sendError(ws, 'Failed to fetch historical candles');
         }
     }
@@ -192,8 +189,6 @@ class CandleWebSocketServer {
                 const from = lastTime || new Date(now.getTime() - intervalMs);
 
                 let candles: Candle[] = [];
-
-                console.log(`Fetching ${interval} candles for ${symbol} from ${from.toISOString()} to ${now.toISOString()}`);
 
                 switch (interval) {
                     case '1m':
@@ -215,9 +210,6 @@ class CandleWebSocketServer {
                         candles = await CandleService.get1DayCandles(symbol, from, now);
                         break;
                 }
-
-                console.log(`Found ${candles.length} candles for ${subscriptionKey}`);
-
 
                 const newCandles = candles.filter(candle => {
                     if (lastTime) {
@@ -248,7 +240,6 @@ class CandleWebSocketServer {
             clearInterval(intervalId);
             this.intervals.delete(subscriptionKey);
             this.lastCandleTimes.delete(subscriptionKey);
-            console.log(`Stopped candle stream for ${subscriptionKey}`);
         }
     }
 
@@ -281,7 +272,9 @@ class CandleWebSocketServer {
         switch (interval) {
             case '1m': return 60 * 1000;
             case '5m': return 5 * 60 * 1000;
+            case '15m': return 15 * 60 * 1000;
             case '1h': return 60 * 60 * 1000;
+            case '4h': return 4 * 60 * 60 * 1000;
             case '1d': return 24 * 60 * 60 * 1000;
             default: return 60 * 1000;
         }
@@ -301,9 +294,7 @@ class CandleWebSocketServer {
 
 const server = CandleWebSocketServer.getInstance();
 
-// Keep the process running
 process.on('SIGINT', () => {
-    console.log('Shutting down WebSocket server...');
     server.close();
     process.exit(0);
 });

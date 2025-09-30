@@ -1,13 +1,25 @@
 import {TradingEngine} from "./TradingEngine";
 import {RedisManager} from "./RedisManager";
 
-// Start the engine
-TradingEngine.getInstance();
+async function initialize() {
+    TradingEngine.getInstance();
 
-const redisManager = RedisManager.getInstance();
-redisManager.startOrderProcessing();
-redisManager.startUserProcessing();
+    const redisManager = RedisManager.getInstance();
 
-// Export for use by other packages
+    try {
+        await redisManager.waitForReady();
+    } catch (error) {
+        console.error('Engine: Redis connection failed:', error);
+        console.error('Engine: Orders cannot be processed without Redis');
+        return;
+    }
+
+    redisManager.startOrderProcessing();
+    redisManager.startUserProcessing();
+}
+
+initialize().catch(error => {
+    console.error('Engine: Failed to initialize:', error);
+});
+
 export { TradingEngine } from "./TradingEngine";
-

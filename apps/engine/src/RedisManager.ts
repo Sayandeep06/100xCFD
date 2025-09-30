@@ -30,38 +30,76 @@ interface UserMessage {
     action: 'create_user';
     data: UserData;
 }
+
+interface AuthData {
+    username: string;
+    password: string;
+}
+
+interface AuthMessage {
+    action: 'authenticate_user';
+    data: AuthData;
+}
 export class RedisManager{
     private static instance: RedisManager;
     private client: RedisClientType;
-    private publisher: RedisClientType
+    private publisher: RedisClientType;
+    private isReady: boolean = false;
+
     constructor(){
         this.client = createClient();
-        this.client.connect();
         this.publisher = createClient();
-        this.publisher.connect()
+
+        this.client.on('error', (err) => console.error('Engine: Redis Client Error:', err));
+        this.publisher.on('error', (err) => console.error('Engine: Redis Publisher Error:', err));
+
+        Promise.all([
+            this.client.connect(),
+            this.publisher.connect()
+        ]).then(() => {
+            this.isReady = true;
+        }).catch(err => {
+            console.error('Engine: Failed to connect to Redis:', err);
+        });
     }
     public static getInstance(){
         if(!RedisManager.instance){
             RedisManager.instance = new RedisManager()
         }return RedisManager.instance
     }
-    private addOrder(){
-        const interval = setInterval( async() => {
+
+    public async waitForReady(timeoutMs: number = 10000): Promise<void> {
+        const startTime = Date.now();
+        while (!this.isReady && Date.now() - startTime < timeoutMs) {
+            await new Promise(resolve => setTimeout(resolve, 50));
+        }
+        if (!this.isReady) {
+            throw new Error('Engine: Redis connection timeout');
+        }
+    }
+
+    private async processOrders() {
+        let orderCount = 0;
+
+        while (true) {
             let queueData: string | null = null;
             try {
                 queueData = await this.client.rPop('Order')
 
-                if (!queueData) return;
+                if (!queueData) {
+                    
+                    await new Promise(resolve => setTimeout(resolve, 50));
+                    continue;
+                }
 
-                console.log('ENGINE: Processing order from Redis queue:', queueData);
+                orderCount++;
+
                 const queueMessage: QueueMessage = JSON.parse(queueData)
                 const id = queueMessage.id
                 const orderMessage: OrderMessage = JSON.parse(queueMessage.message)
                 const order = orderMessage.data
-                console.log('ENGINE: Parsed order data:', order);
 
                 const position = await TradingEngine.getInstance().placeOrder(order.userId, order.symbol, order.side, order.margin, order.leverage)
-                console.log('ENGINE: Position created:', position.positionId);
 
                 const response = {
                     success: true,
@@ -77,9 +115,9 @@ export class RedisManager{
                 }
                 await this.publisher.publish(id, JSON.stringify(response))
             } catch (error) {
-                console.error('Error processing order:', error)
+                console.error(`Engine: Error processing order #${orderCount}:`, error);
+                console.error('Engine: Error stack:', error instanceof Error ? error.stack : 'No stack trace');
 
-            
                 if (queueData) {
                     try {
                         const queueMessage: QueueMessage = JSON.parse(queueData)
@@ -93,43 +131,77 @@ export class RedisManager{
                     }
                 }
             }
-        },1000)
+        }
+    }
+
+    private addOrder(){
+        this.processOrders();
     }
 
     public startOrderProcessing() {
         this.addOrder();
     }
-    private addUser(){
-        setInterval( async() => {
+    private async processUsers() {
+        while (true) {
             let queueData: string | null = null;
             try {
                 queueData = await this.client.rPop('User')
-                if (!queueData) return;
 
-                const queueMessage: QueueMessage = JSON.parse(queueData)
-                const userMessage: UserMessage = JSON.parse(queueMessage.message)
-                const userData = userMessage.data;
-
-                const existingUser = TradingEngine.getInstance().findUserByUsername(userData.username);
-                if (existingUser) {
-                    await this.publisher.publish(queueMessage.id, JSON.stringify({
-                        success: false,
-                        error: 'Username already exists'
-                    }));
-                    return;
+                if (!queueData) {
+                    
+                    await new Promise(resolve => setTimeout(resolve, 50));
+                    continue;
                 }
 
-                const userId = Date.now();
+                const queueMessage: QueueMessage = JSON.parse(queueData)
+                const message = JSON.parse(queueMessage.message)
 
-                const user = TradingEngine.getInstance().createUser(userId, userData.username, userData.password, userData.startingBalance)
+                if (message.action === 'create_user') {
+                    const userMessage: UserMessage = message;
+                    const userData = userMessage.data;
 
-                await this.publisher.publish(queueMessage.id, JSON.stringify({
-                    success: true,
-                    data: { userId: user.userId, username: user.username }
-                }))
+                    const existingUser = TradingEngine.getInstance().findUserByUsername(userData.username);
+                    if (existingUser) {
+                        await this.publisher.publish(queueMessage.id, JSON.stringify({
+                            success: false,
+                            error: 'Username already exists'
+                        }));
+                        continue;
+                    }
+
+                    const userId = Date.now();
+                    const user = TradingEngine.getInstance().createUser(userId, userData.username, userData.password, userData.startingBalance)
+
+                    await this.publisher.publish(queueMessage.id, JSON.stringify({
+                        success: true,
+                        data: { userId: user.userId, username: user.username }
+                    }));
+
+                } else if (message.action === 'authenticate_user') {
+                    const authMessage: AuthMessage = message;
+                    const authData = authMessage.data;
+
+                    const user = TradingEngine.getInstance().authenticateUser(authData.username, authData.password);
+
+                    if (user) {
+                        await this.publisher.publish(queueMessage.id, JSON.stringify({
+                            success: true,
+                            data: {
+                                userId: user.userId,
+                                username: user.username,
+                                balance: user.balances.usd.available
+                            }
+                        }));
+                    } else {
+                        await this.publisher.publish(queueMessage.id, JSON.stringify({
+                            success: false,
+                            error: 'Invalid credentials'
+                        }));
+                    }
+                }
 
             } catch (error) {
-                console.error('Error processing user creation:', error)
+                console.error('Error processing user operation:', error)
 
                 if (queueData) {
                     try {
@@ -144,7 +216,11 @@ export class RedisManager{
                     }
                 }
             }
-        },1000)
+        }
+    }
+
+    private addUser(){
+        this.processUsers();
     }
 
     public startUserProcessing() {

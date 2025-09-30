@@ -33,7 +33,6 @@ export const useRedisData = (symbols: string[], wsUrl?: string) => {
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Default WebSocket URL - adjust based on your backend
   const defaultWsUrl = wsUrl || 'ws://localhost:8080/ws';
 
   const connectWebSocket = useCallback(() => {
@@ -42,18 +41,15 @@ export const useRedisData = (symbols: string[], wsUrl?: string) => {
       const ws = new WebSocket(defaultWsUrl);
 
       ws.onopen = () => {
-        console.log('WebSocket connected to Redis stream');
         setIsConnected(true);
         setError(null);
 
-        // Subscribe to price feeds for all symbols
         ws.send(JSON.stringify({
           action: 'subscribe',
           type: 'prices',
           symbols: symbols
         }));
 
-        // Subscribe to candle data
         symbols.forEach(symbol => {
           ws.send(JSON.stringify({
             action: 'subscribe',
@@ -100,15 +96,12 @@ export const useRedisData = (symbols: string[], wsUrl?: string) => {
                 setCandleData(prev => {
                   const existing = prev[message.symbol!] || [];
 
-                  // Check if this is an update to the last candle or a new one
                   const lastCandle = existing[existing.length - 1];
                   if (lastCandle && Math.abs(lastCandle.time - newCandle.time) < 30000) {
-                    // Update existing candle
                     const updated = [...existing];
                     updated[updated.length - 1] = newCandle;
                     return { ...prev, [message.symbol!]: updated };
                   } else {
-                    // Add new candle, keep only last 200 candles
                     const updated = [...existing, newCandle].slice(-200);
                     return { ...prev, [message.symbol!]: updated };
                   }
@@ -122,7 +115,6 @@ export const useRedisData = (symbols: string[], wsUrl?: string) => {
               break;
 
             default:
-              console.log('Unknown message type:', message.type);
           }
         } catch (error) {
           console.error('Error parsing WebSocket message:', error);
@@ -131,11 +123,9 @@ export const useRedisData = (symbols: string[], wsUrl?: string) => {
       };
 
       ws.onclose = (event) => {
-        console.log('WebSocket disconnected:', event.code, event.reason);
         setIsConnected(false);
         setWebsocket(null);
 
-        // Attempt to reconnect after 3 seconds unless it was a manual close
         if (event.code !== 1000) {
           setTimeout(() => {
             connectWebSocket();
@@ -157,7 +147,6 @@ export const useRedisData = (symbols: string[], wsUrl?: string) => {
     }
   }, [defaultWsUrl, symbols]);
 
-  // Send trading orders
   const sendOrder = useCallback((order: {
     action: 'buy' | 'sell';
     symbol: string;
@@ -181,14 +170,12 @@ export const useRedisData = (symbols: string[], wsUrl?: string) => {
     return false;
   }, [websocket, isConnected]);
 
-  // Get historical data
   const getHistoricalData = useCallback(async (
     symbol: string,
     interval: string = '1m',
     limit: number = 100
   ): Promise<CandleData[]> => {
     try {
-      // This would typically be an HTTP request to your backend
       const response = await fetch(`/api/candles?symbol=${symbol}&interval=${interval}&limit=${limit}`);
       if (response.ok) {
         const data = await response.json();
@@ -207,7 +194,6 @@ export const useRedisData = (symbols: string[], wsUrl?: string) => {
     return [];
   }, []);
 
-  // Initialize connection
   useEffect(() => {
     if (symbols.length > 0) {
       connectWebSocket();
@@ -220,7 +206,6 @@ export const useRedisData = (symbols: string[], wsUrl?: string) => {
     };
   }, [connectWebSocket, symbols.length]);
 
-  // Manually reconnect
   const reconnect = useCallback(() => {
     if (websocket) {
       websocket.close();

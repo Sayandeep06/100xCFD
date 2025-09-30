@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 
 interface Candle {
   symbol: string;
@@ -44,50 +44,52 @@ interface TradeResponse {
 export const useActualBackend = (interval: string = '1m') => {
   const [candleData, setCandleData] = useState<Candle[]>([]);
   const [priceData, setPriceData] = useState<Record<string, PriceData>>({});
-  const [websocket, setWebsocket] = useState<WebSocket | null>(null);
+  const websocketRef = useRef<WebSocket | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // WebSocket connection for candle data (port 3005)
   const connectCandleWebSocket = useCallback(() => {
     try {
       setError(null);
+
+      if (websocketRef.current) {
+        websocketRef.current.close(1000, 'Reconnecting');
+        websocketRef.current = null;
+      }
+
       const ws = new WebSocket('ws://localhost:3005');
+      websocketRef.current = ws;
 
       ws.onopen = () => {
-        console.log('Connected to candle WebSocket server');
         setIsConnected(true);
         setError(null);
 
-        // Subscribe to BTCUSDT candles with specified interval
         const subscribeMessage = {
           action: 'subscribe',
           symbol: 'BTCUSDT',
           interval: interval
         };
-        console.log('Sending subscription:', subscribeMessage);
         ws.send(JSON.stringify(subscribeMessage));
 
-        // Request some historical data (adjust time range based on interval)
         const now = new Date();
-        let timeRange = 60 * 60 * 1000; // 1 hour default
+        let timeRange = 60 * 60 * 1000; 
 
         switch (interval) {
           case '1m':
           case '5m':
-            timeRange = 60 * 60 * 1000; // 1 hour
+            timeRange = 60 * 60 * 1000; 
             break;
           case '15m':
-            timeRange = 6 * 60 * 60 * 1000; // 6 hours
+            timeRange = 6 * 60 * 60 * 1000; 
             break;
           case '1h':
-            timeRange = 24 * 60 * 60 * 1000; // 24 hours
+            timeRange = 24 * 60 * 60 * 1000; 
             break;
           case '4h':
-            timeRange = 7 * 24 * 60 * 60 * 1000; // 7 days
+            timeRange = 7 * 24 * 60 * 60 * 1000; 
             break;
           case '1d':
-            timeRange = 30 * 24 * 60 * 60 * 1000; // 30 days
+            timeRange = 30 * 24 * 60 * 60 * 1000; 
             break;
         }
 
@@ -100,21 +102,18 @@ export const useActualBackend = (interval: string = '1m') => {
           from: from.toISOString(),
           to: now.toISOString()
         };
-        console.log('Requesting historical data:', historicalMessage);
         ws.send(JSON.stringify(historicalMessage));
       };
 
       ws.onmessage = (event) => {
         try {
           const message: WebSocketMessage = JSON.parse(event.data);
-          console.log('Received WebSocket message:', message);
 
           switch (message.type) {
             case 'candle':
               if (message.data && !Array.isArray(message.data)) {
                 const candle = message.data as Candle;
                 setCandleData(prev => {
-                  // Update or add the candle
                   const existing = prev.findIndex(c =>
                     Math.abs(new Date(c.timestamp).getTime() - new Date(candle.timestamp).getTime()) < 30000
                   );
@@ -124,17 +123,16 @@ export const useActualBackend = (interval: string = '1m') => {
                     updated[existing] = candle;
                     return updated;
                   } else {
-                    return [...prev, candle].slice(-200); // Keep last 200 candles
+                    return [...prev, candle].slice(-200); 
                   }
                 });
 
-                // Update price data from latest candle
                 setPriceData(prev => ({
                   ...prev,
                   [candle.symbol]: {
                     symbol: candle.symbol,
                     price: candle.close,
-                    change: 0, // We'll calculate this
+                    change: 0, 
                     changePercent: 0,
                     volume: candle.volume,
                     high24h: candle.high,
@@ -149,14 +147,12 @@ export const useActualBackend = (interval: string = '1m') => {
                 const candles = message.data as Candle[];
                 setCandleData(candles);
 
-                // Calculate price change from historical data
                 if (candles.length >= 2) {
                   const latest = candles[candles.length - 1];
                   const previous = candles[candles.length - 2];
                   const change = latest.close - previous.close;
                   const changePercent = (change / previous.close) * 100;
 
-                  // Calculate 24h high/low
                   const high24h = Math.max(...candles.map(c => c.high));
                   const low24h = Math.min(...candles.map(c => c.low));
                   const volume24h = candles.reduce((sum, c) => sum + c.volume, 0);
@@ -178,7 +174,6 @@ export const useActualBackend = (interval: string = '1m') => {
               break;
 
             case 'ack':
-              console.log('WebSocket ACK:', message.message);
               break;
 
             case 'error':
@@ -187,7 +182,6 @@ export const useActualBackend = (interval: string = '1m') => {
               break;
 
             default:
-              console.log('Unknown message type:', message.type);
           }
         } catch (error) {
           console.error('Error parsing WebSocket message:', error);
@@ -196,11 +190,8 @@ export const useActualBackend = (interval: string = '1m') => {
       };
 
       ws.onclose = (event) => {
-        console.log('Candle WebSocket disconnected:', event.code, event.reason);
         setIsConnected(false);
-        setWebsocket(null);
 
-        // Attempt to reconnect after 3 seconds unless it was a manual close
         if (event.code !== 1000) {
           setTimeout(() => {
             connectCandleWebSocket();
@@ -213,8 +204,6 @@ export const useActualBackend = (interval: string = '1m') => {
         setError('WebSocket connection failed');
         setIsConnected(false);
       };
-
-      setWebsocket(ws);
     } catch (error) {
       console.error('Failed to create WebSocket connection:', error);
       setError('Failed to connect to candle server');
@@ -222,7 +211,6 @@ export const useActualBackend = (interval: string = '1m') => {
     }
   }, [interval]);
 
-  // HTTP API call for placing trades (port 8080)
   const placeTrade = useCallback(async (trade: TradeRequest): Promise<TradeResponse> => {
     try {
       const response = await fetch('http://localhost:8080/api/v1/trades/trade', {
@@ -257,15 +245,11 @@ export const useActualBackend = (interval: string = '1m') => {
     }
   }, []);
 
-  // Redis price polling (would need a separate endpoint)
   const pollRedisPrice = useCallback(async () => {
     try {
-      // This would need to be implemented as an HTTP endpoint
-      // that reads from the Redis 'priceToFE' queue
       const response = await fetch('http://localhost:8080/api/v1/prices/price/latest');
       if (response.ok) {
         const data = await response.json();
-        // Update price data
         setPriceData(prev => ({
           ...prev,
           BTCUSDT: {
@@ -279,28 +263,26 @@ export const useActualBackend = (interval: string = '1m') => {
     }
   }, []);
 
-  // Initialize connection
   useEffect(() => {
     connectCandleWebSocket();
 
-    // Poll Redis prices every second (if endpoint exists)
     const priceInterval = setInterval(pollRedisPrice, 1000);
 
     return () => {
-      if (websocket) {
-        websocket.close(1000, 'Component unmounting');
-      }
       clearInterval(priceInterval);
+      if (websocketRef.current) {
+        websocketRef.current.close(1000, 'Component unmounting');
+        websocketRef.current = null;
+      }
     };
-  }, [connectCandleWebSocket, pollRedisPrice]);
+  }, [interval, connectCandleWebSocket, pollRedisPrice]);
 
-  // Manually reconnect
   const reconnect = useCallback(() => {
-    if (websocket) {
-      websocket.close();
+    if (websocketRef.current) {
+      websocketRef.current.close();
     }
     connectCandleWebSocket();
-  }, [websocket, connectCandleWebSocket]);
+  }, [connectCandleWebSocket]);
 
   return {
     candleData,

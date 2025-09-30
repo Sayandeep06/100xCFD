@@ -31,12 +31,21 @@ class CandleService {
             });
             if (trades.length == 0)
                 return null;
+            // Calculate high/low without spread operator to avoid stack overflow on large arrays
+            let high = trades[0].price;
+            let low = trades[0].price;
+            for (const trade of trades) {
+                if (trade.price > high)
+                    high = trade.price;
+                if (trade.price < low)
+                    low = trade.price;
+            }
             return {
                 symbol: symbol,
                 timestamp: startTime,
                 open: trades[0].price,
-                high: Math.max(...trades.map(t => t.price)),
-                low: Math.min(...trades.map(t => t.price)),
+                high: high,
+                low: low,
                 close: trades[trades.length - 1].price,
                 volume: trades.reduce((acc, t) => acc + t.price, 0)
             };
@@ -116,13 +125,22 @@ class CandleService {
             const interval = 60 * 1000 * 60 * 4;
             let current = this.getClosestTime(from, interval);
             const end = this.getClosestTime(to, interval);
+            // Process in batches to avoid stack overflow
+            const batchSize = 10;
+            const times = [];
             while (current <= end) {
-                const candleEnd = new Date(current.getTime() + interval);
-                const candle = yield this.getCandles(symbol, current, candleEnd);
-                if (candle) {
-                    candles.push(candle);
-                }
+                times.push(new Date(current));
                 current = new Date(current.getTime() + interval);
+            }
+            // Process in batches
+            for (let i = 0; i < times.length; i += batchSize) {
+                const batch = times.slice(i, i + batchSize);
+                const promises = batch.map(time => this.getCandles(symbol, time, new Date(time.getTime() + interval)));
+                const results = yield Promise.all(promises);
+                for (const candle of results) {
+                    if (candle)
+                        candles.push(candle);
+                }
             }
             return candles;
         });
@@ -133,13 +151,22 @@ class CandleService {
             const interval = 60 * 1000 * 60 * 24;
             let current = this.getClosestTime(from, interval);
             const end = this.getClosestTime(to, interval);
+            // Process in batches to avoid stack overflow
+            const batchSize = 10;
+            const times = [];
             while (current <= end) {
-                const candleEnd = new Date(current.getTime() + interval);
-                const candle = yield this.getCandles(symbol, current, candleEnd);
-                if (candle) {
-                    candles.push(candle);
-                }
+                times.push(new Date(current));
                 current = new Date(current.getTime() + interval);
+            }
+            // Process in batches
+            for (let i = 0; i < times.length; i += batchSize) {
+                const batch = times.slice(i, i + batchSize);
+                const promises = batch.map(time => this.getCandles(symbol, time, new Date(time.getTime() + interval)));
+                const results = yield Promise.all(promises);
+                for (const candle of results) {
+                    if (candle)
+                        candles.push(candle);
+                }
             }
             return candles;
         });
