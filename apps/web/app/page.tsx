@@ -176,8 +176,10 @@ export default function TradingPlatform() {
     setIsChartReady(true);
 
     const resizeObserver = new ResizeObserver(entries => {
-      if (entries.length === 0 || entries[0].target !== chartContainerRef.current) return;
-      const { width, height } = entries[0].contentRect;
+      if (entries.length === 0 || entries[0]?.target !== chartContainerRef.current) return;
+      const newEntry = entries[0];
+      if (!newEntry) return;
+      const { width, height } = newEntry.contentRect;
       chart.applyOptions({ width, height });
       setTimeout(() => {
         chart.timeScale().fitContent();
@@ -356,6 +358,10 @@ export default function TradingPlatform() {
   };
 
   const closePosition = async (positionId: string) => {
+    if (!user) {
+      alert('User not authenticated');
+      return;
+    }
 
     try {
       const response = await fetch('http://localhost:8080/api/v1/trades/close', {
