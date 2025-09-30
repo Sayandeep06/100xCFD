@@ -25,7 +25,6 @@ class RedisManager {
     }
     pricePoller() {
         return __awaiter(this, void 0, void 0, function* () {
-            console.log('Starting price poller - storing trades only...');
             while (true) {
                 try {
                     const message = yield this.client.rPop('toDB');
@@ -39,7 +38,6 @@ class RedisManager {
                                 trade_time: trade.trade_time
                             }
                         });
-                        console.log(`Stored trade: ${trade.symbol} $${trade.price} qty:${trade.quantity}`);
                     }
                     else {
                         continue;

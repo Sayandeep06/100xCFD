@@ -1,5 +1,5 @@
 export interface User {
-    userId: number;
+    userId: number | bigint;
     username: string;
     password: string;
     balances: {
@@ -18,7 +18,7 @@ export interface MarketPrice {
 
 export interface Order {
     orderId: string;
-    userId: number;
+    userId: number | bigint;
     symbol: string;
     side: 'buy' | 'sell';
     type: 'market' | 'limit';
@@ -48,7 +48,7 @@ export interface Order {
 
 export interface Position {
     positionId: string;
-    userId: number;
+    userId: number | bigint;
     symbol: string;
     side: 'long' | 'short';
 
@@ -77,7 +77,7 @@ export interface Position {
 
 export interface LiquidationEvent {
     positionId: string;
-    userId: number;
+    userId: number | bigint;
     symbol: string;
     liquidation_price: number;
     margin_lost: number;
@@ -99,7 +99,7 @@ export type side = 'buy' | 'sell';
 
 export interface LegacyOrder {
     orderId: number;
-    userId: number;
+    userId: number | bigint;
     type: 'long' | 'short';
     asset: string;
     buy: number;

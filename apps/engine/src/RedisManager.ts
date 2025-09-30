@@ -160,7 +160,7 @@ export class RedisManager{
                     const userMessage: UserMessage = message;
                     const userData = userMessage.data;
 
-                    const existingUser = TradingEngine.getInstance().findUserByUsername(userData.username);
+                    const existingUser = await TradingEngine.getInstance().findUserByUsername(userData.username);
                     if (existingUser) {
                         await this.publisher.publish(queueMessage.id, JSON.stringify({
                             success: false,
@@ -170,7 +170,7 @@ export class RedisManager{
                     }
 
                     const userId = Date.now();
-                    const user = TradingEngine.getInstance().createUser(userId, userData.username, userData.password, userData.startingBalance)
+                    const user = await TradingEngine.getInstance().createUser(userId, userData.username, userData.password, userData.startingBalance)
 
                     await this.publisher.publish(queueMessage.id, JSON.stringify({
                         success: true,
@@ -181,7 +181,7 @@ export class RedisManager{
                     const authMessage: AuthMessage = message;
                     const authData = authMessage.data;
 
-                    const user = TradingEngine.getInstance().authenticateUser(authData.username, authData.password);
+                    const user = await TradingEngine.getInstance().authenticateUser(authData.username, authData.password);
 
                     if (user) {
                         await this.publisher.publish(queueMessage.id, JSON.stringify({

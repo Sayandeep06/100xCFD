@@ -14,7 +14,7 @@ tradesRouter.get('/positions/:userId', async (req, res) => {
         }
 
         const tradingEngine = TradingEngine.getInstance();
-        const positions = tradingEngine.getUserPositions(parseInt(userId));
+        const positions = await tradingEngine.getUserPositions(parseInt(userId));
 
         res.status(200).json({
             success: true,
@@ -40,7 +40,7 @@ tradesRouter.post('/close', async (req, res) => {
         }
 
         const tradingEngine = TradingEngine.getInstance();
-        const closedPosition = tradingEngine.closePosition(positionId, parseInt(userId));
+        const closedPosition = await tradingEngine.closePosition(positionId, parseInt(userId));
 
         if (closedPosition) {
             res.status(200).json({

@@ -14,7 +14,6 @@ const index_1 = require("./index");
 class CandleService {
     static getClosestTime(timestamp, interval) {
         const time = Math.floor(timestamp.getTime() / interval) * interval;
-        //timestamp.getTime() gives a numeric representation to the date
         return new Date(time);
     }
     static getCandles(symbol, startTime, endTime) {
@@ -31,7 +30,6 @@ class CandleService {
             });
             if (trades.length == 0)
                 return null;
-            // Calculate high/low without spread operator to avoid stack overflow on large arrays
             let high = trades[0].price;
             let low = trades[0].price;
             for (const trade of trades) {
@@ -125,14 +123,12 @@ class CandleService {
             const interval = 60 * 1000 * 60 * 4;
             let current = this.getClosestTime(from, interval);
             const end = this.getClosestTime(to, interval);
-            // Process in batches to avoid stack overflow
             const batchSize = 10;
             const times = [];
             while (current <= end) {
                 times.push(new Date(current));
                 current = new Date(current.getTime() + interval);
             }
-            // Process in batches
             for (let i = 0; i < times.length; i += batchSize) {
                 const batch = times.slice(i, i + batchSize);
                 const promises = batch.map(time => this.getCandles(symbol, time, new Date(time.getTime() + interval)));
@@ -151,14 +147,12 @@ class CandleService {
             const interval = 60 * 1000 * 60 * 24;
             let current = this.getClosestTime(from, interval);
             const end = this.getClosestTime(to, interval);
-            // Process in batches to avoid stack overflow
             const batchSize = 10;
             const times = [];
             while (current <= end) {
                 times.push(new Date(current));
                 current = new Date(current.getTime() + interval);
             }
-            // Process in batches
             for (let i = 0; i < times.length; i += batchSize) {
                 const batch = times.slice(i, i + batchSize);
                 const promises = batch.map(time => this.getCandles(symbol, time, new Date(time.getTime() + interval)));

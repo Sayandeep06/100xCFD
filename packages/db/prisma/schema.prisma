@@ -20,6 +20,45 @@ model trade {
   price      Float
   quantity   Float
   trade_time DateTime
-  
+
   @@index([symbol, trade_time])
+}
+
+model User {
+  id              BigInt     @id
+  username        String     @unique
+  password        String
+  available_usd   Float      @default(10000)
+  used_usd        Float      @default(0)
+  created_at      DateTime   @default(now())
+  updated_at      DateTime   @updatedAt
+  positions       Position[]
+
+  @@index([username])
+}
+
+model Position {
+  id                  String   @id @default(uuid())
+  user_id             BigInt
+  symbol              String
+  side                String
+  leverage            Int
+  margin              Float
+  position_size       Float
+  quantity            Float
+  entry_price         Float
+  current_price       Float
+  unrealized_pnl      Float    @default(0)
+  realized_pnl        Float    @default(0)
+  roi_percentage      Float    @default(0)
+  liquidation_price   Float
+  margin_ratio        Float    @default(1.0)
+  status              String
+  opened_at           DateTime @default(now())
+  closed_at           DateTime?
+
+  user                User     @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@index([user_id, status])
+  @@index([symbol, status])
 }

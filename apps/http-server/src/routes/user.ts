@@ -57,7 +57,7 @@ userRouter.post('/signin', async (req, res) => {
             });
         }
 
-        const user = TradingEngine.getInstance().authenticateUser(username, password);
+        const user = await TradingEngine.getInstance().authenticateUser(username, password);
 
         if (user) {
             res.status(200).json({
@@ -94,7 +94,7 @@ userRouter.get('/data/:userId', async (req, res) => {
             });
         }
 
-        const user = TradingEngine.getInstance().getUser(parseInt(userId));
+        const user = await TradingEngine.getInstance().getUser(parseInt(userId));
 
         if (user) {
             res.status(200).json({
