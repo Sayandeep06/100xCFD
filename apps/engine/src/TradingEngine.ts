@@ -1,11 +1,12 @@
 import type { User, Position, MarketPrice, TradingEngineConfig, LiquidationEvent } from './types';
-import { v4 as uuidv4 } from 'uuid';
 import { CandleService, prisma } from 'db';
 
 export class TradingEngine{
     private static instance: TradingEngine
     private prices: Map<string, MarketPrice> = new Map();
     private config: TradingEngineConfig
+    private pricePollingInterval?: NodeJS.Timeout;
+    private isPollingPrices: boolean = false;
 
     private constructor(){
         this.config = {
@@ -69,7 +70,6 @@ export class TradingEngine{
             ? entry_price * (1 - 1/leverage)
             : entry_price * (1 + 1/leverage);
 
-        // Update user balance in DB
         await prisma.user.update({
             where: { id: userId },
             data: {
@@ -122,81 +122,128 @@ export class TradingEngine{
     }
 
     async updatePrice() {
+        // FIXED: Cleanup old interval to prevent multiple intervals running
+        if (this.pricePollingInterval) {
+            clearInterval(this.pricePollingInterval);
+            this.pricePollingInterval = undefined;
+        }
+
         const symbols = ['BTCUSDT'];
 
         const pollPrices = async () => {
-            for (const symbol of symbols) {
-                try {
-                    const [bidPrice, askPrice] = await Promise.all([
-                        CandleService.getLatestBidPrice(symbol),
-                        CandleService.getLatestAskPrice(symbol)
-                    ]);
+            // FIXED: Prevent overlapping executions
+            if (this.isPollingPrices) {
+                console.warn('[Price Polling] Previous poll still running, skipping this tick');
+                return;
+            }
 
-                    if (bidPrice && askPrice && bidPrice > 0 && askPrice > 0) {
-                        const midPrice = (bidPrice + askPrice) / 2;
-                        this.prices.set(symbol, {
-                            symbol,
-                            price: midPrice,
-                            timestamp: new Date()
-                        });
+            this.isPollingPrices = true;
+            try {
+                for (const symbol of symbols) {
+                    try {
+                        const [bidPrice, askPrice] = await Promise.all([
+                            CandleService.getLatestBidPrice(symbol),
+                            CandleService.getLatestAskPrice(symbol)
+                        ]);
 
-                        this.updatePositionPrices(symbol, midPrice);
-                    } else {
-                        console.warn(`Invalid price data for ${symbol}: bid=${bidPrice}, ask=${askPrice}. Using existing prices for position updates.`);
+                        if (bidPrice && askPrice && bidPrice > 0 && askPrice > 0) {
+                            const midPrice = (bidPrice + askPrice) / 2;
+                            this.prices.set(symbol, {
+                                symbol,
+                                price: midPrice,
+                                timestamp: new Date()
+                            });
+
+                            await this.updatePositionPrices(symbol, midPrice);
+                        } else {
+                            console.warn(`Invalid price data for ${symbol}: bid=${bidPrice}, ask=${askPrice}. Using existing prices for position updates.`);
+
+                            const existingPrice = this.prices.get(symbol);
+                            if (existingPrice) {
+                                await this.updatePositionPrices(symbol, existingPrice.price);
+                            } else {
+                                console.error(`No existing price data available for ${symbol}. Skipping position updates.`);
+                            }
+                        }
+                    } catch (error) {
+                        console.error(`Error updating price for ${symbol}:`, error);
 
                         const existingPrice = this.prices.get(symbol);
                         if (existingPrice) {
-                            this.updatePositionPrices(symbol, existingPrice.price);
+                            console.warn(`Using existing price data for ${symbol} position updates due to fetch error.`);
+                            await this.updatePositionPrices(symbol, existingPrice.price);
                         } else {
-                            console.error(`No existing price data available for ${symbol}. Skipping position updates.`);
+                            console.error(`No fallback price data available for ${symbol}. Positions cannot be updated.`);
                         }
                     }
-                } catch (error) {
-                    console.error(`Error updating price for ${symbol}:`, error);
-
-                    const existingPrice = this.prices.get(symbol);
-                    if (existingPrice) {
-                        console.warn(`Using existing price data for ${symbol} position updates due to fetch error.`);
-                        this.updatePositionPrices(symbol, existingPrice.price);
-                    } else {
-                        console.error(`No fallback price data available for ${symbol}. Positions cannot be updated.`);
-                    }
                 }
+            } finally {
+                this.isPollingPrices = false;
             }
         };
 
+        // Initial poll
         await pollPrices();
 
-        setInterval(pollPrices, 1000);
+        // FIXED: Store interval ID for cleanup
+        this.pricePollingInterval = setInterval(async () => {
+            try {
+                await pollPrices();
+            } catch (error) {
+                console.error('[Price Polling] Unhandled error in poll cycle:', error);
+            }
+        }, 1000);
+    }
+
+    // ADDED: Method to stop price polling (useful for testing/shutdown)
+    stopPricePolling(): void {
+        if (this.pricePollingInterval) {
+            clearInterval(this.pricePollingInterval);
+            this.pricePollingInterval = undefined;
+            console.log('[Price Polling] Stopped');
+        }
     }
     private async updatePositionPrices(symbol:string, currentPrice:number): Promise<void>{
-        const positions = await prisma.position.findMany({
+        await prisma.$executeRaw`
+            UPDATE "Position"
+            SET
+                current_price = ${currentPrice},
+                unrealized_pnl = (${currentPrice} - entry_price) * quantity,
+                roi_percentage = ((${currentPrice} - entry_price) * quantity / margin) * 100,
+                margin_ratio = (margin + ((${currentPrice} - entry_price) * quantity)) / margin
+            WHERE symbol = ${symbol}
+            AND status = 'open'
+            AND side = 'long'
+        `;
+
+        await prisma.$executeRaw`
+            UPDATE "Position"
+            SET
+                current_price = ${currentPrice},
+                unrealized_pnl = (entry_price - ${currentPrice}) * quantity,
+                roi_percentage = ((entry_price - ${currentPrice}) * quantity / margin) * 100,
+                margin_ratio = (margin + ((entry_price - ${currentPrice}) * quantity)) / margin
+            WHERE symbol = ${symbol}
+            AND status = 'open'
+            AND side = 'short'
+        `;
+
+        const toLiquidate = await prisma.position.findMany({
             where: {
                 symbol,
-                status: 'open'
-            }
+                status: 'open',
+                margin_ratio: { lte: 0.01 }
+            },
+            select: { id: true }
         });
 
-        for (const position of positions) {
-            const price_diff = position.side === 'long'
-                ? currentPrice - position.entry_price
-                : position.entry_price - currentPrice;
-            const unrealized_pnl = price_diff * position.quantity;
-            const roi_percentage = (unrealized_pnl / position.margin) * 100;
-            const margin_ratio = (position.margin + unrealized_pnl) / position.margin;
-
-            await prisma.position.update({
-                where: { id: position.id },
-                data: {
-                    current_price: currentPrice,
-                    unrealized_pnl,
-                    roi_percentage,
-                    margin_ratio
-                }
-            });
-
-            if (margin_ratio <= 0.01) {
-                await this.liquidatePosition(position.id, 'margin_call');
+        // FIXED: Add error recovery - if one liquidation fails, continue with others
+        for (const pos of toLiquidate) {
+            try {
+                await this.liquidatePosition(pos.id, 'margin_call');
+            } catch (error) {
+                console.error(`[LIQUIDATION ERROR] Failed to liquidate position ${pos.id}:`, error);
+                // Continue processing remaining positions
             }
         }
     }
@@ -217,96 +264,102 @@ export class TradingEngine{
     }
 
     async liquidatePosition(positionId: string, reason: 'margin_call'): Promise<void> {
-        const position = await prisma.position.findUnique({
-            where: { id: positionId }
-        });
+        await prisma.$transaction(async (tx) => {
+            const position = await tx.position.findUnique({
+                where: { id: positionId }
+            });
 
-        if (!position || position.status !== 'open') return;
+            if (!position || position.status !== 'open') return;
 
-        const user = await prisma.user.findUnique({
-            where: { id: position.user_id }
-        });
+            const user = await tx.user.findUnique({
+                where: { id: position.user_id }
+            });
 
-        if (!user) return;
+            if (!user) return;
 
-        const final_pnl = position.unrealized_pnl;
-        const net_pnl = final_pnl;
+            const final_pnl = position.unrealized_pnl;
+            const remaining_margin = Math.max(0, position.margin + final_pnl);
+            await tx.user.update({
+                where: { id: position.user_id },
+                data: {
+                    available_usd: user.available_usd + remaining_margin,
+                    used_usd: user.used_usd - position.margin
+                }
+            });
 
-        const remaining_margin = Math.max(0, position.margin + net_pnl);
+            await tx.position.update({
+                where: { id: positionId },
+                data: {
+                    status: 'liquidated',
+                    realized_pnl: final_pnl,
+                    closed_at: new Date()
+                }
+            });
 
-        await prisma.user.update({
-            where: { id: position.user_id },
-            data: {
-                available_usd: user.available_usd + remaining_margin,
-                used_usd: user.used_usd - position.margin
-            }
-        });
-
-        await prisma.position.update({
-            where: { id: positionId },
-            data: {
-                status: 'liquidated',
-                realized_pnl: final_pnl,
-                closed_at: new Date()
-            }
+            console.log(`[LIQUIDATION] Position ${positionId} liquidated. Reason: ${reason}. PnL: ${final_pnl}, Remaining: ${remaining_margin}`);
         });
     }
 
     async closePosition(positionId: string, userId: number | bigint): Promise<Position> {
-        const position = await prisma.position.findUnique({
-            where: { id: positionId }
+        // ATOMIC: Wrap in transaction to prevent race conditions
+        return await prisma.$transaction(async (tx) => {
+            const position = await tx.position.findUnique({
+                where: { id: positionId }
+            });
+
+            if (!position) throw new Error('Position not found');
+            // FIXED: Compare BigInt and Number properly by converting to BigInt
+            if (position.user_id !== BigInt(userId)) throw new Error('Unauthorized');
+            if (position.status !== 'open') throw new Error('Position not open');
+
+            const user = await tx.user.findUnique({
+                where: { id: userId }
+            });
+
+            if (!user) throw new Error('User not found');
+
+            const net_pnl = position.unrealized_pnl;
+            const final_amount = position.margin + net_pnl;
+
+            // Both updates happen atomically - either both succeed or both rollback
+            await tx.user.update({
+                where: { id: userId },
+                data: {
+                    available_usd: user.available_usd + final_amount,
+                    used_usd: user.used_usd - position.margin
+                }
+            });
+
+            const updatedPosition = await tx.position.update({
+                where: { id: positionId },
+                data: {
+                    status: 'closed',
+                    realized_pnl: position.unrealized_pnl,
+                    closed_at: new Date()
+                }
+            });
+
+            return {
+                positionId: updatedPosition.id,
+                userId: Number(updatedPosition.user_id),
+                symbol: updatedPosition.symbol,
+                side: updatedPosition.side as 'long' | 'short',
+                leverage: updatedPosition.leverage,
+                margin: updatedPosition.margin,
+                position_size: updatedPosition.position_size,
+                quantity: updatedPosition.quantity,
+                entry_price: updatedPosition.entry_price,
+                current_price: updatedPosition.current_price,
+                unrealized_pnl: updatedPosition.unrealized_pnl,
+                realized_pnl: updatedPosition.realized_pnl,
+                roi_percentage: updatedPosition.roi_percentage,
+                liquidation_price: updatedPosition.liquidation_price,
+                margin_ratio: updatedPosition.margin_ratio,
+                status: updatedPosition.status as 'open' | 'closed' | 'liquidated',
+                opened_at: updatedPosition.opened_at,
+                closed_at: updatedPosition.closed_at || undefined
+            } as Position;
         });
-
-        if (!position) throw new Error('Position not found');
-        if (position.user_id !== userId) throw new Error('Unauthorized');
-        if (position.status !== 'open') throw new Error('Position not open');
-
-        const user = await prisma.user.findUnique({
-            where: { id: userId }
-        });
-
-        if (!user) throw new Error('User not found');
-
-        const net_pnl = position.unrealized_pnl;
-        const final_amount = position.margin + net_pnl;
-
-        await prisma.user.update({
-            where: { id: userId },
-            data: {
-                available_usd: user.available_usd + final_amount,
-                used_usd: user.used_usd - position.margin
-            }
-        });
-
-        const updatedPosition = await prisma.position.update({
-            where: { id: positionId },
-            data: {
-                status: 'closed',
-                realized_pnl: position.unrealized_pnl,
-                closed_at: new Date()
-            }
-        });
-
-        return {
-            positionId: updatedPosition.id,
-            userId: Number(updatedPosition.user_id),
-            symbol: updatedPosition.symbol,
-            side: updatedPosition.side as 'long' | 'short',
-            leverage: updatedPosition.leverage,
-            margin: updatedPosition.margin,
-            position_size: updatedPosition.position_size,
-            quantity: updatedPosition.quantity,
-            entry_price: updatedPosition.entry_price,
-            current_price: updatedPosition.current_price,
-            unrealized_pnl: updatedPosition.unrealized_pnl,
-            realized_pnl: updatedPosition.realized_pnl,
-            roi_percentage: updatedPosition.roi_percentage,
-            liquidation_price: updatedPosition.liquidation_price,
-            margin_ratio: updatedPosition.margin_ratio,
-            status: updatedPosition.status as 'open' | 'closed' | 'liquidated',
-            opened_at: updatedPosition.opened_at,
-            closed_at: updatedPosition.closed_at || undefined
-        } as Position;
     }
 
     async createUser(userId: number | bigint, username: string, password: string, startingBalance: number = 10000): Promise<User> {

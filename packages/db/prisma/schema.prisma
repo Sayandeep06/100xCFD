@@ -61,4 +61,6 @@ model Position {
 
   @@index([user_id, status])
   @@index([symbol, status])
+  @@index([margin_ratio])
+  @@index([symbol, status, margin_ratio])
 }

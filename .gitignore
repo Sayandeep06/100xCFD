@@ -38,3 +38,6 @@ yarn-error.log*
 .DS_Store
 *.pem
 .claude
+
+# Internal Analysis Documents
+LIQUIDATION_ANALYSIS.md

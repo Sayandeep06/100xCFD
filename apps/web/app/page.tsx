@@ -380,9 +380,6 @@ export default function TradingPlatform() {
       if (result.success) {
         fetchPositions();
         fetchUserData();
-      } else {
-        console.error('Failed to close position:', result.message);
-        alert(`Failed to close position: ${result.message}`);
       }
     } catch (error) {
       console.error('Error closing position:', error);
@@ -770,7 +767,7 @@ export default function TradingPlatform() {
               <p>No open positions</p>
             ) : (
               <div className={styles.positionsList}>
-                {positions.map(position => (
+                {positions.filter(p => p.status === 'open').map(position => (
                   <div key={position.positionId} className={styles.positionItem}>
                     <div className={styles.positionHeader}>
                       <div className={styles.positionInfo}>
