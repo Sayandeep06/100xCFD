@@ -98,6 +98,24 @@ export default function TradingPlatform() {
   const [isChartReady, setIsChartReady] = useState(false);
   const { priceData, candleData, isConnected, error, placeTrade } = useActualBackend(selectedTimeframe);
 
+  // Calculate portfolio metrics
+  const portfolioMetrics = React.useMemo(() => {
+    const openPositions = positions.filter(p => p.status === 'open');
+
+    const totalPnL = openPositions.reduce((sum, pos) => sum + pos.unrealized_pnl, 0);
+    const invested = openPositions.reduce((sum, pos) => sum + pos.margin, 0);
+    const currentValue = invested + totalPnL;
+    const percentageChange = invested > 0 ? (totalPnL / invested) * 100 : 0;
+    const numberOfPositions = openPositions.length;
+
+    return {
+      invested,
+      currentValue,
+      percentageChange,
+      numberOfPositions
+    };
+  }, [positions]);
+
   const showToast = (message: string, type: Toast['type'] = 'info') => {
     const id = Math.random().toString(36).substr(2, 9);
     const newToast: Toast = { id, message, type };
@@ -762,6 +780,30 @@ export default function TradingPlatform() {
           </div>
 
           <div className={styles.positionsPanel}>
+            <div className={styles.portfolioSummary}>
+              <h3>Portfolio Overview</h3>
+              <div className={styles.portfolioMetrics}>
+                <div className={styles.portfolioMetricCard}>
+                  <span className={styles.metricLabel}>Invested</span>
+                  <span className={styles.metricValue}>
+                    ${portfolioMetrics.invested.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                  <span className={styles.metricSubtext}>
+                    {portfolioMetrics.numberOfPositions} Position{portfolioMetrics.numberOfPositions !== 1 ? 's' : ''}
+                  </span>
+                </div>
+                <div className={styles.portfolioMetricCard}>
+                  <span className={styles.metricLabel}>Current Value</span>
+                  <span className={`${styles.metricValue} ${portfolioMetrics.currentValue >= portfolioMetrics.invested ? styles.positive : styles.negative}`}>
+                    ${portfolioMetrics.currentValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                  <span className={`${styles.metricSubtext} ${portfolioMetrics.percentageChange >= 0 ? styles.positive : styles.negative}`}>
+                    {portfolioMetrics.percentageChange >= 0 ? '+' : ''}{portfolioMetrics.percentageChange.toFixed(2)}%
+                  </span>
+                </div>
+              </div>
+            </div>
+
             <h3>Open Positions</h3>
             {positions.length === 0 ? (
               <p>No open positions</p>
