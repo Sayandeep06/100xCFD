@@ -27,5 +27,8 @@
     "redis": "^5.8.2",
     "uuid": "^13.0.0",
     "db": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.5"
   }
 }
