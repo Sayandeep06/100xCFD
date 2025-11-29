@@ -50,8 +50,8 @@ export class RedisManager{
         this.client = createClient();
         this.publisher = createClient();
 
-        this.client.on('error', (err) => console.error('Engine: Redis Client Error:', err));
-        this.publisher.on('error', (err) => console.error('Engine: Redis Publisher Error:', err));
+        (this.client as any).on('error', (err: Error) => console.error('Engine: Redis Client Error:', err));
+        (this.publisher as any).on('error', (err: Error) => console.error('Engine: Redis Publisher Error:', err));
 
         Promise.all([
             this.client.connect(),

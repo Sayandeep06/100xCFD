@@ -1,14 +1,15 @@
 import type { User, Position, MarketPrice, TradingEngineConfig, LiquidationEvent } from './types';
 import { CandleService, prisma } from 'db';
+import bcrypt from 'bcryptjs';
 
-export class TradingEngine{
+export class TradingEngine {
     private static instance: TradingEngine
     private prices: Map<string, MarketPrice> = new Map();
     private config: TradingEngineConfig
     private pricePollingInterval?: NodeJS.Timeout;
     private isPollingPrices: boolean = false;
 
-    private constructor(){
+    private constructor() {
         this.config = {
             max_leverage: 500,
             max_position_size: 1000000,
@@ -17,13 +18,13 @@ export class TradingEngine{
         this.startPricePolling();
         this.loadInitialData();
     }
-    public static getInstance(){
-        if(!this.instance){
+    public static getInstance() {
+        if (!this.instance) {
             this.instance = new TradingEngine();
-        }return this.instance;
+        } return this.instance;
     }
 
-    private async loadInitialData(){
+    private async loadInitialData() {
         this.prices.set('BTCUSDT', {
             symbol: 'BTCUSDT',
             price: 101000,
@@ -39,16 +40,16 @@ export class TradingEngine{
     public async placeOrder(
         userId: number | bigint,
         symbol: string,
-        side: 'buy'| 'sell',
+        side: 'buy' | 'sell',
         margin: number,
         leverage: number
-    ){
+    ) {
         const user = await prisma.user.findUnique({
             where: { id: userId }
         });
 
-        if(!user)   throw new Error("User not found")
-        if(leverage > this.config.max_leverage){
+        if (!user) throw new Error("User not found")
+        if (leverage > this.config.max_leverage) {
             throw new Error(`Max leverage is ${this.config.max_leverage}x`)
         }
         if (user.available_usd < margin) {
@@ -67,8 +68,8 @@ export class TradingEngine{
         const quantity = position_size / entry_price
 
         const liquidation_price = side === 'buy'
-            ? entry_price * (1 - 1/leverage)
-            : entry_price * (1 + 1/leverage);
+            ? entry_price * (1 - 1 / leverage)
+            : entry_price * (1 + 1 / leverage);
 
         await prisma.user.update({
             where: { id: userId },
@@ -203,7 +204,7 @@ export class TradingEngine{
             console.log('[Price Polling] Stopped');
         }
     }
-    private async updatePositionPrices(symbol:string, currentPrice:number): Promise<void>{
+    private async updatePositionPrices(symbol: string, currentPrice: number): Promise<void> {
         await prisma.$executeRaw`
             UPDATE "Position"
             SET
@@ -247,7 +248,7 @@ export class TradingEngine{
             }
         }
     }
-    private calculateUnrealisedPnL(position:Position):number{
+    private calculateUnrealisedPnL(position: Position): number {
         const price_diff = position.side === 'long'
             ? position.current_price - position.entry_price
             : position.entry_price - position.current_price;
@@ -371,11 +372,12 @@ export class TradingEngine{
             throw new Error(`User with ID ${userId} already exists`);
         }
 
+        const hashedPassword = await bcrypt.hash(password, 10);
         const dbUser = await prisma.user.create({
             data: {
                 id: userId,
                 username,
-                password,
+                password: hashedPassword,
                 available_usd: startingBalance,
                 used_usd: 0
             }
@@ -399,11 +401,11 @@ export class TradingEngine{
             where: { username }
         });
 
-        if (dbUser && dbUser.password === password) {
+        if (dbUser && await bcrypt.compare(password, dbUser.password)) {
             return {
                 userId: Number(dbUser.id),
                 username: dbUser.username,
-                password: dbUser.password,
+                password: dbUser.password, // Ideally we shouldn't return this, but keeping interface consistent for now
                 balances: {
                     usd: {
                         available: dbUser.available_usd,

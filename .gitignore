@@ -2,6 +2,7 @@
 
 # Dependencies
 node_modules
+**/node_modules
 .pnp
 .pnp.js
 
@@ -26,7 +27,9 @@ coverage
 .next/
 out/
 build
+**/build
 dist
+**/dist
 
 
 # Debug
@@ -41,3 +44,4 @@ yarn-error.log*
 
 # Internal Analysis Documents
 LIQUIDATION_ANALYSIS.md
+DOCKER-DEPLOYMENT-STRATEGY.md

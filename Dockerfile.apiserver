@@ -1,0 +1,14 @@
+FROM node:18-alpine
+WORKDIR /app
+
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+
+COPY apps/http-server/package.json ./apps/http-server/
+
+RUN npm i -g pnpm
+RUN pnpm install --frozen-lockfile
+
+COPY apps/http-server ./apps/http-server
+
+WORKDIR /app/apps/http-server
+CMD ["pnpm", "run", "dev"]

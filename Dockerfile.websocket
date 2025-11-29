@@ -1,0 +1,23 @@
+FROM node:18-alpine
+WORKDIR /app
+
+
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
+
+
+COPY apps/websocket/package.json ./apps/websocket/
+COPY packages/db/package.json ./packages/db/
+
+
+RUN npm i -g pnpm
+RUN pnpm install --frozen-lockfile
+
+COPY apps/websocket ./apps/websocket
+COPY packages/db ./packages/db
+
+
+WORKDIR /app/apps/websocket
+RUN pnpm run build
+
+
+CMD ["pnpm", "run", "start"]

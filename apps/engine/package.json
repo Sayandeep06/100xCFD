@@ -24,8 +24,13 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "db": "workspace:*",
     "redis": "^5.8.2",
-    "uuid": "^13.0.0",
-    "db": "workspace:*"
+    "uuid": "^13.0.0"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^3.0.0",
+    "@types/node": "^22.10.5"
   }
 }

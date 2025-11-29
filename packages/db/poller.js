@@ -15,7 +15,11 @@ const index_1 = require("./index");
 class RedisManager {
     constructor() {
         this.client = (0, redis_1.createClient)();
-        this.client.connect();
+        this.client.connect().then(() => {
+            console.log("Redis Connected Successfully");
+        }).catch((err) => {
+            console.error("Redis Connection Error:", err);
+        });
     }
     static getInstance() {
         if (!this.instance) {
@@ -40,7 +44,7 @@ class RedisManager {
                         });
                     }
                     else {
-                        continue;
+                        yield new Promise(resolve => setTimeout(resolve, 1000));
                     }
                 }
                 catch (error) {
