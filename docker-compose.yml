@@ -1,6 +1,7 @@
 version: '3.8'
 
 services:
+  # Database
   cfd-postgres:
     image: postgres:15-alpine
     container_name: cfd-trading-db
@@ -12,12 +13,128 @@ services:
       - "5433:5432"
     volumes:
       - cfd_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cfduser -d cfd_trading"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
+    networks:
+      - cfd-network
+
+  # Redis Cache
   redis:
-    image: redis:latest
-    container_name: redis
+    image: redis:7-alpine
+    container_name: cfd-redis
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - cfd-network
+
+  # Trading Engine Service
+  engine:
+    build:
+      context: .
+      dockerfile: Dockerfile.engine
+    container_name: cfd-engine
+    environment:
+      DATABASE_URL: postgresql://cfduser:cfdpass123@cfd-postgres:5432/cfd_trading
+      REDIS_URL: redis://redis:6379
+      NODE_ENV: production
+    depends_on:
+      cfd-postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - cfd-network
+
+  # HTTP API Server
+  http-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.apiserver
+    container_name: cfd-http-server
+    environment:
+      DATABASE_URL: postgresql://cfduser:cfdpass123@cfd-postgres:5432/cfd_trading
+      REDIS_URL: redis://redis:6379
+      NODE_ENV: production
+    ports:
+      - "3001:3001"
+    depends_on:
+      cfd-postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      engine:
+        condition: service_started
+    restart: unless-stopped
+    networks:
+      - cfd-network
+
+  # WebSocket Server
+  websocket:
+    build:
+      context: .
+      dockerfile: Dockerfile.websocket
+    container_name: cfd-websocket
+    environment:
+      DATABASE_URL: postgresql://cfduser:cfdpass123@cfd-postgres:5432/cfd_trading
+      NODE_ENV: production
+    ports:
+      - "3005:3005"
+    depends_on:
+      cfd-postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - cfd-network
+
+  # Price Poller Service
+  price-poller:
+    build:
+      context: .
+      dockerfile: Dockerfile.price-poller
+    container_name: cfd-price-poller
+    environment:
+      REDIS_URL: redis://redis:6379
+      NODE_ENV: production
+    depends_on:
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - cfd-network
+
+  # Frontend (Next.js)
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    container_name: cfd-web
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_API_URL: http://http-server:3001
+      NEXT_PUBLIC_WS_URL: ws://websocket:3005
+    ports:
+      - "3000:3000"
+    depends_on:
+      - http-server
+      - websocket
+    restart: unless-stopped
+    networks:
+      - cfd-network
+
+networks:
+  cfd-network:
+    driver: bridge
 
 volumes:
   cfd_postgres_data:
