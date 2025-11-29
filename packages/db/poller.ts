@@ -15,7 +15,11 @@ export class RedisManager {
 
   constructor() {
     this.client = createClient()
-    this.client.connect()
+    this.client.connect().then(() => {
+      console.log("Redis Connected Successfully");
+    }).catch((err) => {
+      console.error("Redis Connection Error:", err);
+    });
   }
 
   public static getInstance() {
@@ -30,7 +34,7 @@ export class RedisManager {
     while (true) {
       try {
         const message = await this.client.rPop('toDB')
-        
+
         if (message) {
           const trade: TradeMessage = JSON.parse(message)
           await prisma.trade.create({
@@ -43,7 +47,7 @@ export class RedisManager {
           })
 
         } else {
-          continue
+          await new Promise(resolve => setTimeout(resolve, 1000));
         }
       } catch (error) {
         console.error('Error in price poller:', error)
