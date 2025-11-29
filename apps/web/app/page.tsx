@@ -50,6 +50,7 @@ interface User {
   userId: number;
   username: string;
   balance: number;
+  token?: string;
 }
 
 export default function TradingPlatform() {
@@ -211,12 +212,12 @@ export default function TradingPlatform() {
       chart.remove();
       setIsChartReady(false);
     };
-  }, [isAuthenticated, user?.userId]); 
+  }, [isAuthenticated, user?.userId]);
 
   useEffect(() => {
     if (isChartReady && candlestickSeriesRef.current && volumeSeriesRef.current && candleData.length > 0) {
       const formattedCandleData = candleData.map(candle => ({
-        time: Math.floor(new Date(candle.timestamp).getTime() / 1000), 
+        time: Math.floor(new Date(candle.timestamp).getTime() / 1000),
         open: candle.open,
         high: candle.high,
         low: candle.low,
@@ -238,7 +239,11 @@ export default function TradingPlatform() {
     if (!user?.userId) return;
 
     try {
-      const response = await fetch(`http://localhost:8080/api/v1/trades/positions/${user.userId}`);
+      const response = await fetch(`http://localhost:8080/api/v1/trades/positions`, {
+        headers: {
+          'Authorization': `Bearer ${user.token}`
+        }
+      });
       const data = await response.json();
 
       if (data.success) {
@@ -284,7 +289,7 @@ export default function TradingPlatform() {
       clearInterval(positionsInterval);
       clearInterval(userDataInterval);
     };
-  }, [user?.userId, fetchPositions, fetchUserData]); 
+  }, [user?.userId, fetchPositions, fetchUserData]);
 
   const executeTrade = async (type: 'long' | 'short') => {
 
@@ -319,9 +324,10 @@ export default function TradingPlatform() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.token}`
         },
         body: JSON.stringify({
-          userId: user.userId,
+          // userId: user.userId, // Removed as it's now handled by token
           asset: selectedSymbol,
           type: type === 'long' ? 'buy' : 'sell',
           margin: marginAmount,
@@ -336,12 +342,16 @@ export default function TradingPlatform() {
         const positionId = result.positionId;
         let positionConfirmed = false;
         let attempts = 0;
-        const maxAttempts = 10; 
+        const maxAttempts = 10;
 
         while (!positionConfirmed && attempts < maxAttempts) {
           await new Promise(resolve => setTimeout(resolve, 500));
 
-          const positionsResponse = await fetch(`http://localhost:8080/api/v1/trades/positions/${user.userId}`);
+          const positionsResponse = await fetch(`http://localhost:8080/api/v1/trades/positions`, {
+            headers: {
+              'Authorization': `Bearer ${user.token}`
+            }
+          });
           const positionsData = await positionsResponse.json();
 
           if (positionsData.success) {
@@ -386,9 +396,10 @@ export default function TradingPlatform() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${user.token}`
         },
         body: JSON.stringify({
-          userId: user.userId,
+          // userId: user.userId,
           positionId: positionId
         })
       });
@@ -477,7 +488,8 @@ export default function TradingPlatform() {
         const userData = {
           userId: result.user.userId,
           username: result.user.username,
-          balance: result.user.balance
+          balance: result.user.balance,
+          token: result.token
         };
         setUser(userData);
         setIsAuthenticated(true);
@@ -605,27 +617,27 @@ export default function TradingPlatform() {
 
         <div className={styles.centerSection}>
           <div className={styles.priceTicker}>
-          {symbols.map(symbol => {
-            const price = priceData[symbol];
-            return (
-              <div
-                key={symbol}
-                className={`${styles.tickerItem} ${selectedSymbol === symbol ? styles.active : ''}`}
-                onClick={() => setSelectedSymbol(symbol)}
-              >
-                <span className={styles.symbol}>{symbol}</span>
-                <span className={styles.price}>
-                  ${price?.price?.toLocaleString('en-US', {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2
-                  }) || '---'}
-                </span>
-                <span className={`${styles.change} ${(price?.change || 0) >= 0 ? styles.positive : styles.negative}`}>
-                  {(price?.changePercent || 0) >= 0 ? '+' : ''}{(price?.changePercent || 0).toFixed(2)}%
-                </span>
-              </div>
-            );
-          })}
+            {symbols.map(symbol => {
+              const price = priceData[symbol];
+              return (
+                <div
+                  key={symbol}
+                  className={`${styles.tickerItem} ${selectedSymbol === symbol ? styles.active : ''}`}
+                  onClick={() => setSelectedSymbol(symbol)}
+                >
+                  <span className={styles.symbol}>{symbol}</span>
+                  <span className={styles.price}>
+                    ${price?.price?.toLocaleString('en-US', {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2
+                    }) || '---'}
+                  </span>
+                  <span className={`${styles.change} ${(price?.change || 0) >= 0 ? styles.positive : styles.negative}`}>
+                    {(price?.changePercent || 0) >= 0 ? '+' : ''}{(price?.changePercent || 0).toFixed(2)}%
+                  </span>
+                </div>
+              );
+            })}
           </div>
         </div>
 
@@ -698,84 +710,84 @@ export default function TradingPlatform() {
               </span>
             </div>
             <div className={`${styles.orderFormContent} ${isOrderFormCollapsed ? styles.collapsed : ''}`}>
-            <div className={styles.formGroup}>
-              <label>Symbol</label>
-              <select
-                value={selectedSymbol}
-                onChange={(e) => setSelectedSymbol(e.target.value)}
-              >
-                {symbols.map(symbol => (
-                  <option key={symbol} value={symbol}>{symbol}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className={styles.formGroup}>
-              <label>Margin (USD)</label>
-              <input
-                type="number"
-                value={marginAmount}
-                onChange={(e) => setMarginAmount(Number(e.target.value))}
-                step="1"
-                min="1"
-              />
-            </div>
-
-            <div className={styles.formGroup}>
-              <label>Leverage</label>
-              <select
-                value={leverage}
-                onChange={(e) => setLeverage(Number(e.target.value))}
-              >
-                <option value={1}>1x</option>
-                <option value={2}>2x</option>
-                <option value={5}>5x</option>
-                <option value={10}>10x</option>
-                <option value={20}>20x</option>
-                <option value={50}>50x</option>
-                <option value={100}>100x</option>
-                <option value={200}>200x</option>
-                <option value={300}>300x</option>
-                <option value={400}>400x</option>
-                <option value={500}>500x</option>
-              </select>
-            </div>
-
-            <div className={styles.currentPrice}>
-              <span>Market Price: ${priceData[selectedSymbol]?.price?.toLocaleString('en-US', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-              }) || '---'}</span>
-            </div>
-
-            <div className={styles.tradeDetails}>
-              <div>Margin: ${marginAmount.toFixed(2)}</div>
-              <div>Position Size: ${(marginAmount * leverage).toLocaleString('en-US', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-              })}</div>
-              <div>Quantity: {priceData[selectedSymbol]?.price
-                ? ((marginAmount * leverage) / priceData[selectedSymbol].price).toFixed(6)
-                : '---'} {selectedSymbol.replace('USDT', '')}
+              <div className={styles.formGroup}>
+                <label>Symbol</label>
+                <select
+                  value={selectedSymbol}
+                  onChange={(e) => setSelectedSymbol(e.target.value)}
+                >
+                  {symbols.map(symbol => (
+                    <option key={symbol} value={symbol}>{symbol}</option>
+                  ))}
+                </select>
               </div>
-            </div>
 
-            <div className={styles.tradeButtons}>
-              <button
-                className={`${styles.tradeButton} ${styles.longButton}`}
-                onClick={() => executeTrade('long')}
-                disabled={isPlacingOrder}
-              >
-                {isPlacingOrder ? 'Placing...' : 'Long / Buy'}
-              </button>
-              <button
-                className={`${styles.tradeButton} ${styles.shortButton}`}
-                onClick={() => executeTrade('short')}
-                disabled={isPlacingOrder}
-              >
-                {isPlacingOrder ? 'Placing...' : 'Short / Sell'}
-              </button>
-            </div>
+              <div className={styles.formGroup}>
+                <label>Margin (USD)</label>
+                <input
+                  type="number"
+                  value={marginAmount}
+                  onChange={(e) => setMarginAmount(Number(e.target.value))}
+                  step="1"
+                  min="1"
+                />
+              </div>
+
+              <div className={styles.formGroup}>
+                <label>Leverage</label>
+                <select
+                  value={leverage}
+                  onChange={(e) => setLeverage(Number(e.target.value))}
+                >
+                  <option value={1}>1x</option>
+                  <option value={2}>2x</option>
+                  <option value={5}>5x</option>
+                  <option value={10}>10x</option>
+                  <option value={20}>20x</option>
+                  <option value={50}>50x</option>
+                  <option value={100}>100x</option>
+                  <option value={200}>200x</option>
+                  <option value={300}>300x</option>
+                  <option value={400}>400x</option>
+                  <option value={500}>500x</option>
+                </select>
+              </div>
+
+              <div className={styles.currentPrice}>
+                <span>Market Price: ${priceData[selectedSymbol]?.price?.toLocaleString('en-US', {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2
+                }) || '---'}</span>
+              </div>
+
+              <div className={styles.tradeDetails}>
+                <div>Margin: ${marginAmount.toFixed(2)}</div>
+                <div>Position Size: ${(marginAmount * leverage).toLocaleString('en-US', {
+                  minimumFractionDigits: 2,
+                  maximumFractionDigits: 2
+                })}</div>
+                <div>Quantity: {priceData[selectedSymbol]?.price
+                  ? ((marginAmount * leverage) / priceData[selectedSymbol].price).toFixed(6)
+                  : '---'} {selectedSymbol.replace('USDT', '')}
+                </div>
+              </div>
+
+              <div className={styles.tradeButtons}>
+                <button
+                  className={`${styles.tradeButton} ${styles.longButton}`}
+                  onClick={() => executeTrade('long')}
+                  disabled={isPlacingOrder}
+                >
+                  {isPlacingOrder ? 'Placing...' : 'Long / Buy'}
+                </button>
+                <button
+                  className={`${styles.tradeButton} ${styles.shortButton}`}
+                  onClick={() => executeTrade('short')}
+                  disabled={isPlacingOrder}
+                >
+                  {isPlacingOrder ? 'Placing...' : 'Short / Sell'}
+                </button>
+              </div>
             </div>
           </div>
 

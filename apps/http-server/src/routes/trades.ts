@@ -1,11 +1,15 @@
 import express, { Router } from 'express'
 import { RedisManager } from '../RedisManager';
 import { TradingEngine } from 'engine';
+import { authMiddleware, AuthRequest } from '../middleware/auth';
+
 export const tradesRouter: Router = express.Router()
 
-tradesRouter.get('/positions/:userId', async (req, res) => {
+tradesRouter.use(authMiddleware);
+
+tradesRouter.get('/positions', async (req: AuthRequest, res) => {
     try {
-        const { userId } = req.params;
+        const userId = req.userId;
 
         if (!userId) {
             return res.status(400).json({
@@ -29,13 +33,14 @@ tradesRouter.get('/positions/:userId', async (req, res) => {
     }
 });
 
-tradesRouter.post('/close', async (req, res) => {
+tradesRouter.post('/close', async (req: AuthRequest, res) => {
     try {
-        const { userId, positionId } = req.body;
+        const { positionId } = req.body;
+        const userId = req.userId;
 
         if (!userId || !positionId) {
             return res.status(400).json({
-                message: "Missing required fields: userId, positionId"
+                message: "Missing required fields: positionId"
             });
         }
 
@@ -63,13 +68,14 @@ tradesRouter.post('/close', async (req, res) => {
     }
 });
 
-tradesRouter.post('/trade', async (req, res) => {
+tradesRouter.post('/trade', async (req: AuthRequest, res) => {
     try {
-        const { userId, asset, type, margin, leverage} = req.body;
+        const { asset, type, margin, leverage } = req.body;
+        const userId = req.userId;
 
         if (!userId || !asset || !type || !margin || !leverage) {
             return res.status(400).json({
-                message: "Missing required fields: userId, asset, type, margin, leverage"
+                message: "Missing required fields: asset, type, margin, leverage"
             });
         }
 
@@ -82,7 +88,7 @@ tradesRouter.post('/trade', async (req, res) => {
         const orderMessage = {
             action: 'place_order',
             data: {
-                userId: parseInt(userId),
+                userId: parseInt(userId!),
                 symbol: asset.toUpperCase(),
                 side: type,
                 margin: parseFloat(margin),
@@ -97,7 +103,7 @@ tradesRouter.post('/trade', async (req, res) => {
             res.status(200).json({
                 success: true,
                 positionId: response.data.positionId,
-                orderId: response.data.positionId, 
+                orderId: response.data.positionId,
                 message: `${type.toUpperCase()} order placed successfully`
             });
         } else {

@@ -1,6 +1,8 @@
 import express, { Router } from 'express'
 import { TradingEngine } from 'engine';
 import { RedisManager } from '../RedisManager';
+import jwt from 'jsonwebtoken';
+import { JWT_SECRET } from '../middleware/auth';
 export const userRouter: Router = express.Router()
 
 userRouter.post('/signup', async (req, res) => {
@@ -16,7 +18,7 @@ userRouter.post('/signup', async (req, res) => {
         const userMessage = {
             action: 'create_user',
             data: {
-                email: '', 
+                email: '',
                 username,
                 password,
                 startingBalance: 10000
@@ -60,6 +62,11 @@ userRouter.post('/signin', async (req, res) => {
         const user = await TradingEngine.getInstance().authenticateUser(username, password);
 
         if (user) {
+            const token = jwt.sign({
+                userId: user.userId,
+                username: user.username
+            }, JWT_SECRET, { expiresIn: '24h' });
+
             res.status(200).json({
                 success: true,
                 user: {
@@ -67,6 +74,7 @@ userRouter.post('/signin', async (req, res) => {
                     username: user.username,
                     balance: user.balances.usd.available
                 },
+                token,
                 message: "Authentication successful"
             });
         } else {
