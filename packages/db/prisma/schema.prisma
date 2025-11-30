@@ -11,7 +11,10 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  // Prisma v7+ no longer supports specifying the connection URL in the schema file.
+  // Provide the connection URL at runtime via environment (process.env) or a
+  // `prisma.config.ts` per the Prisma 7 configuration docs:
+  // https://pris.ly/d/config-datasource
 }
 
 model trade {
